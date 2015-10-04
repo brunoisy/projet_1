@@ -42,16 +42,7 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
       return E_NOHEADER;
     }
 
-<<<<<<< HEAD
-	pkt[0]=(pkt_t)data[0];
-  int i;
-  for (i = 0; i < 4; i++)
-    {
-      pkt[i] = data[i];		// récuppère tout le header
-    }
-x
-pkt->length = ntohs(pkt->length); // endianness !!
-=======
+
   pkt->type = data[0]>>5;
   pkt->window = data[0];
   pkt->seqnum = data[1];
@@ -59,7 +50,7 @@ pkt->length = ntohs(pkt->length); // endianness !!
   pkt->length = pkt->length << 8;
   pkt->length = pkt->length | data[3];  
   pkt->length = ntohs(pkt->length); // endianness !!
->>>>>>> d480ee42aca0cde6541597a0e731fa82068a8a1b
+
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
   if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK && pkt->type != PTYPE_NACK)
@@ -67,7 +58,7 @@ pkt->length = ntohs(pkt->length); // endianness !!
       return E_TYPE;
     }
 
-  if (pkt->length + 8 != (uint16_t) len)
+  if (pkt->length + 8 != (uint16_t) len){
     
       return E_UNCONSISTENT;
     }
@@ -80,22 +71,26 @@ pkt->length = ntohs(pkt->length); // endianness !!
 
   pkt->payload = (char *)malloc(pkt->length);
 
+	int i;
   for (i = 0; i < pkt->length; i++)
     {
       (pkt->payload)[i] = data[4 + i];
     }
 
-  startcrcbyte = 4 + pkt->length;
+  int startcrcbyte = 4 + pkt->length;
   if (pkt->length % 4 != 0)
     {
       startcrcbyte = startcrcbyte + 4 - pkt->length%4;
     }
+pkt->crc=0;
   for (i = 0; i < 4; i++)
     {
-    pkt[5 + i] = data[startcrcbyte + i]
+pkt->crc = pkt->crc <<8;
+    pkt->crc = pkt->crc | data[startcrcbyte + i];
+
 }
 
-pkt->crc=nthol(pkt->crc); // endianness!!
+pkt->crc=ntohl(pkt->crc); // endianness!!
 
 
 
@@ -120,9 +115,9 @@ pkt_encode (const pkt_t * pkt, char *buf, size_t * len)
 
   int length_to_encode = htons(pkt->length);
   
-  
-  buf[0] = (char)(pkt>>(8*sizeof(pkt)-8);
-  buf[1] = (char)(pkt>>(8*sizeof(pkt)-16);
+ 
+  buf[0] = ((char)pkt->type)<<5 | (char) pkt->window;
+  buf[1] = pkt->seqnum;
   buf[2] = (char) length_to_encode>>8;
   buf[3] = (char) length_to_encode;
   
@@ -135,7 +130,7 @@ pkt_encode (const pkt_t * pkt, char *buf, size_t * len)
   buf[2] = (char) ((pkt->length) >> 8);
   buf[3] = (char) (pkt->length); 
   int i; */
-
+int i;
   for (i = 0; i < pkt->length; i++)
     {
       buf[4 + i] = (pkt->payload)[i];
