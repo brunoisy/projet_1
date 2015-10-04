@@ -107,13 +107,29 @@ pkt_encode (const pkt_t * pkt, char *buf, size_t * len)
     }
 
 
-  char first_byte = (char) (((pkt->type) << 5) | (pkt->window));
+  int length_to_encode = htons(pkt->length);
+  
+  
+  int i;
+  for(i=0;i<2;i++){
+
+   buf[i] = pkt[i];
+
+  }
+
+  buf[2] = (char) length_to_encode>>8;
+  buf[3] = (char) length_to_encode;
+  
+  
+
+  /*char first_byte = (char) (((pkt->type) << 5) | (pkt->window));
   char second_byte = (char) pkt->seqnum;
   buf[0] = first_byte;
   buf[1] = second_byte;
   buf[2] = (char) ((pkt->length) >> 8);
-  buf[3] = (char) (pkt->length);
-  int i;
+  buf[3] = (char) (pkt->length); 
+  int i; */
+
   for (i = 0; i < pkt->length; i++)
     {
       buf[4 + i] = (pkt->payload)[i];
@@ -129,8 +145,8 @@ pkt_encode (const pkt_t * pkt, char *buf, size_t * len)
   buf[7 + (pkt->length)] = (char) (pkt->crc);
 */
 
-uint32_t crc =(const uint32_t)crc32 (0, (const Bytef *)buf, *len - 4);
-buf[4 + (pkt->length) + (pkt->length)%4] = (char) (crc>> 24);
+uint32_t crc = htons((const uint32_t)crc32 (0, (const Bytef *)buf, *len - 4));
+  buf[4 + (pkt->length) + (pkt->length)%4] = (char) (crc>> 24);
   buf[5 + (pkt->length)+(pkt->length)%4] = (char) (crc >> 16);
   buf[6 + (pkt->length)+(pkt->length)%4] = (char) (crc >> 8);
   buf[7 + (pkt->length)+(pkt->length)%4] = (char) crc;
@@ -141,6 +157,8 @@ buf[4 + (pkt->length) + (pkt->length)%4] = (char) (crc>> 24);
 ptypes_t pkt_get_type (const pkt_t * pkt)
 {
   return pkt->type;
+
+
 }
 
 uint8_t pkt_get_window (const pkt_t * pkt )
