@@ -9,11 +9,11 @@
 
 struct __attribute__ ((__packed__)) pkt
 {
-  ptypes_t type;
-  uint8_t window;
+  ptypes_t type:3;
+  uint8_t window:5;
   uint8_t seqnum;
-  char *payload;
   uint16_t length;
+  char *payload;
   uint32_t crc;
 };
 
@@ -40,19 +40,13 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
       return E_NOHEADER;
     }
 
-  ptypes_t type = data[0] >> 5;	// a vérif
+  int i;
+  for (i = 0; i < 4; i++)
+    {
+      pkt[i] = data[i];		// récuppère tout le header
+    }
 
-  pkt->type = type;
-
-  pkt->window = (data[0]<< 3) >> 3;	// verif, comment avoir E_WINDOW?
-
-  pkt->seqnum = data[1];
-
-  pkt->length = data[2];
-	pkt->length=pkt->length << 8;
-	pkt->length=pkt->length | (uint16_t)data[3];
-
-
+pkt->length = ntohs(pkt->length); // endianness !!
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
   if (type != PTYPE_DATA && type != PTYPE_ACK && type != PTYPE_NACK)
@@ -60,33 +54,41 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
       return E_TYPE;
     }
 
-  if (pkt->length > 512 || pkt->length + 8 != (uint16_t)len)
-    {				// "pkt->length + 8 != len" peut être pas nécessaire
+  if (pkt->length + 8 != (uint16_t) len)
+    {
+      return E_UNCONSISTENT;
+    }
+
+  if (pkt->length > 512)
+    {				
       return E_LENGTH;
     }
 
-  //pkt->payload = (data << 32) >> (len * 8 - 32);
-
-	int i;
-	  for (i = 0; i < pkt->length; i++)
-	    {
-	      (pkt->payload)[i]= data[4+i];
-	    }
-
-
-  pkt->crc = data[4+pkt->length];
-  pkt->crc = pkt->crc << 8;
-pkt->crc = pkt->crc | (int)data[5+pkt->length];
-  pkt->crc = pkt->crc << 8;
-pkt->crc = pkt->crc | (int)data[6+pkt->length];
-  pkt->crc = pkt->crc << 8;
-pkt->crc = pkt->length | (int)data[7+pkt->length];
-  pkt->crc = pkt->crc << 8;
 
 
 
+  pkt->payload = (char *)malloc(pkt->length);
 
-  if (pkt->crc != (uint32_t)crc32 (0, (const Bytef *) pkt->payload, len - 4))
+  for (i = 0; i < pkt->length; i++)
+    {
+      (pkt->payload)[i] = data[4 + i];
+    }
+
+  startcrcbyte = 4 + pkt->length;
+  if (pkt->length % 4 != 0)
+    {
+      startcrcbyte = startcrcbyte + 4 - pkt->length;
+    }
+  for (i = 0; i < 4; i++)
+    {
+    pkt[5 + i] = data[startcrcbyte + i]
+}
+
+pkt->crc=nthol(pkt->crc); // endianness!!
+
+
+
+  if (pkt->crc != (uint32_t) crc32 (0, (const Bytef *) pkt->payload, len - 4))
     {				// passage barbare de int à uint
       return E_CRC;
     }
