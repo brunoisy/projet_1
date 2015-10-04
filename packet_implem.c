@@ -36,18 +36,19 @@ pkt_del (pkt_t * pkt)
 
 pkt_status_code
 pkt_decode (const char *data, const size_t len, pkt_t * pkt)
-{
+{	
   if (len < 8)
     {				// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
       return E_NOHEADER;
     }
 
+	pkt[0]=(pkt_t)data[0];
   int i;
   for (i = 0; i < 4; i++)
     {
       pkt[i] = data[i];		// récuppère tout le header
     }
-
+x
 pkt->length = ntohs(pkt->length); // endianness !!
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
