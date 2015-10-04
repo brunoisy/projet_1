@@ -47,11 +47,11 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
   pkt->seqnum = data[1];
   pkt->length = data[2];
   pkt->length = pkt->length << 8;
-  pkt-length = pkt->length | data[3];  
+  pkt->length = pkt->length | data[3];  
   pkt->length = ntohs(pkt->length); // endianness !!
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
-  if (type != PTYPE_DATA && type != PTYPE_ACK && type != PTYPE_NACK)
+  if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK && pkt->type != PTYPE_NACK)
     {
       return E_TYPE;
     }
