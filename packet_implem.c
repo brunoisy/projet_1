@@ -42,6 +42,7 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
       return E_NOHEADER;
     }
 
+<<<<<<< HEAD
 	pkt[0]=(pkt_t)data[0];
   int i;
   for (i = 0; i < 4; i++)
@@ -50,6 +51,15 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
     }
 x
 pkt->length = ntohs(pkt->length); // endianness !!
+=======
+  pkt->type = data[0]>>5;
+  pkt->window = data[0];
+  pkt->seqnum = data[1];
+  pkt->length = data[2];
+  pkt->length = pkt->length << 8;
+  pkt-length = pkt->length | data[3];  
+  pkt->length = ntohs(pkt->length); // endianness !!
+>>>>>>> d480ee42aca0cde6541597a0e731fa82068a8a1b
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
   if (type != PTYPE_DATA && type != PTYPE_ACK && type != PTYPE_NACK)
@@ -58,7 +68,7 @@ pkt->length = ntohs(pkt->length); // endianness !!
     }
 
   if (pkt->length + 8 != (uint16_t) len)
-    {
+    
       return E_UNCONSISTENT;
     }
 
@@ -78,7 +88,7 @@ pkt->length = ntohs(pkt->length); // endianness !!
   startcrcbyte = 4 + pkt->length;
   if (pkt->length % 4 != 0)
     {
-      startcrcbyte = startcrcbyte + 4 - pkt->length;
+      startcrcbyte = startcrcbyte + 4 - pkt->length%4;
     }
   for (i = 0; i < 4; i++)
     {
@@ -111,13 +121,8 @@ pkt_encode (const pkt_t * pkt, char *buf, size_t * len)
   int length_to_encode = htons(pkt->length);
   
   
-  int i;
-  for(i=0;i<2;i++){
-
-   buf[i] = pkt[i];
-
-  }
-
+  buf[0] = (char)(pkt>>(8*sizeof(pkt)-8);
+  buf[1] = (char)(pkt>>(8*sizeof(pkt)-16);
   buf[2] = (char) length_to_encode>>8;
   buf[3] = (char) length_to_encode;
   
