@@ -1,10 +1,10 @@
 #include "packet_interface.h"
+
+/* Extra #includes */
 #include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-/* Extra #includes */
-/* Your code will be inserted here */
+#include <arpa/inet.h>
 
 
 struct __attribute__ ((__packed__)) pkt
@@ -18,12 +18,14 @@ struct __attribute__ ((__packed__)) pkt
 };
 
 
+
 pkt_t *
 pkt_new ()
 {
   pkt_t *ret = (pkt_t *) malloc (sizeof (pkt_t));	// Taille d'un packet
   return ret;
 }
+
 
 void
 pkt_del (pkt_t * pkt)
@@ -63,8 +65,6 @@ pkt->length = ntohs(pkt->length); // endianness !!
     {				
       return E_LENGTH;
     }
-
-
 
 
   pkt->payload = (char *)malloc(pkt->length);
