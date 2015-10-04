@@ -87,10 +87,12 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	}
 
 
+int i;
+       
 
-	pkt->payload = (char *)malloc(pkt->length);
+	pkt->payload = (char *)malloc(pkt->length*sizeof(char));
 
-	int i;
+	
 	for (i = 0; i < pkt->length; i++) {
 		(pkt->payload)[i] = data[4 + i];
 	}
@@ -121,6 +123,18 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	if (pkt->crc != thiscrc) {	// passage barbare de int à uint
 		return E_CRC;
 	}
+
+
+printf("data dans decode\n");
+for (i = 1; i <= pkt->length+padding+8; i++) { 
+		printBits(1, &data[i-1]);
+		if(i%4==0 && i !=0){
+			printf("\n");
+		}
+	}
+
+
+
 
 	return PKT_OK;
 }
@@ -166,12 +180,21 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 	buf[5 + (pkt->length) + padding] = (char)(crc >> 16);
 	buf[6 + (pkt->length) + padding] = (char)(crc >> 8);
 	buf[7 + (pkt->length) + padding] = (char)crc;
-	*len = 8 + (pkt->length);
-/*
-	for (i = 0; i <pkt->length+padding+8; i++) { 
-		printBits(1, &buf[i]);
+	*len = 8 + (pkt->length)+padding;
+
+
+
+printf("buf dans encode\n");
+	for (i = 1; i <= pkt->length+padding+8; i++) { 
+		printBits(1, &buf[i-1]);
+		if(i%4==0 && i !=0){
+			printf("\n");
+		}
 	}
-*/
+
+
+
+
 	return PKT_OK;
 }
 
@@ -268,20 +291,24 @@ pkt_set_payload(pkt_t * pkt, const char *data, const uint16_t length)
 
 int main(int argc, char *argv[])
 {
-	pkt_t *pkt = malloc(sizeof(pkt_t));
-	pkt_t *pkt2 = malloc(sizeof(pkt_t));
+	pkt_t *pkt = (pkt_t *)malloc(sizeof(pkt_t));
+	pkt_t *pkt2 = (pkt_t *)malloc(sizeof(pkt_t));
 	pkt->type = PTYPE_DATA;	// 1
 	pkt->window = 3;
 	pkt->seqnum = 1;
-	pkt->length = 13;
-	char *payload = "abcdefghjkl";	// avec \0, 7 charactères
-	pkt->payload = payload;
+	pkt->length = 2;
+	pkt->payload = (char *)malloc(pkt->length);
+	
+        pkt->payload[0] = 'a';
+        pkt->payload[1] = 'c';
+  
+	
 
 	size_t buffersize = 8 + pkt->length;	// taille fixe + taille payload
 	if (pkt->length % 4 != 0) {
 		buffersize = buffersize + 4 - (pkt->length % 4);	// + padding
 	}
-	char *buffer = (char *)malloc((size_t) buffersize);
+	char * buffer = (char *)malloc((size_t) buffersize);
 	int padding = 0;
 	if (pkt->length % 4 != 0) {
 		padding = 4 - pkt->length % 4;
@@ -289,14 +316,17 @@ int main(int argc, char *argv[])
 	printf("inencode\n");
 	pkt_encode(pkt, buffer, &buffersize);
 	printf("outencode\n");
+
 	printf("indecode\n");
-	pkt->payload = "sdvdsqv";
 	pkt_decode(buffer, buffersize + padding, pkt2);
 	printf("outdecode\n");
 
 	printf("type %d, window %d, seqnum %d, length %d, payload %s, crc %u\n",
 	       pkt2->type, pkt2->window, pkt2->seqnum, pkt2->length,
 	       pkt2->payload, pkt2->crc);
+
+	pkt_del(pkt);
+	//pkt_del(pkt2);
 
 }
 
@@ -314,6 +344,6 @@ void printBits(size_t const size, void const *const ptr)
 			printf("%u", byte);
 		}
 	}
-	puts("");
+	printf(" ");
 }
 
