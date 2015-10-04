@@ -7,6 +7,23 @@
 #include <arpa/inet.h>
 
 
+void printBits(size_t const size, void const * const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;
+    unsigned char byte;
+    int i, j;
+
+    for (i=size-1;i>=0;i--)
+    {
+        for (j=7;j>=0;j--)
+        {
+            byte = b[i] & (1<<j);
+            byte >>= j;
+            printf("%u", byte);
+        }
+    }
+    puts("");
+}
 
 
 struct __attribute__ ((__packed__)) pkt
@@ -28,7 +45,7 @@ pkt_new ()
   return ret;
 }
 
-
+//Free payload ?
 void
 pkt_del (pkt_t * pkt)
 {
@@ -56,18 +73,28 @@ pkt_decode (const char *data, const size_t len, pkt_t * pkt)
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
   if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK && pkt->type != PTYPE_NACK)
-    {
+    {printf("ERROR\n");
       return E_TYPE;
+      printf("ERROR\n");
     }
+printf("PKT LENGTH:%d\n", pkt->length);
+printf("LEN:%d\n", (uint16_t)len);
 
-  if (pkt->length + 8 != (uint16_t) len){
-    
+int padding = 0;
+if(pkt->length%4 != 0){
+padding = 4 - pkt->length%4;
+}
+printf("PADDING:%d\n" , padding);
+  if (pkt->length + 8 + padding != (uint16_t) len ){
+    printf("ERROR LENGTH\n");
       return E_UNCONSISTENT;
+printf("ERROR\n");
     }
 
   if (pkt->length > 512)
-    {				
+    {		printf("ERROR\n");		
       return E_LENGTH;
+
     }
 
 
@@ -100,6 +127,7 @@ pkt->crc=ntohl(pkt->crc); // endianness!!
     {				// passage barbare de int à uint
       return E_CRC;
     }
+
   return PKT_OK;
 }
 
@@ -120,7 +148,7 @@ pkt_encode (const pkt_t * pkt, char *buf, size_t * len)
  
   buf[0] = ((char)pkt->type)<<5 | (char) pkt->window;
   buf[1] = pkt->seqnum;
-  buf[2] = (char) length_to_encode>>8;
+  buf[2] = (char) (length_to_encode>>8);
   buf[3] = (char) length_to_encode;
   
   
@@ -147,13 +175,20 @@ int i;
   buf[6 + (pkt->length)] = (char) ((pkt->crc) >> 8);
   buf[7 + (pkt->length)] = (char) (pkt->crc);
 */
+int padding = 0;
+if(pkt->length%4 != 0){
+padding = 4 - pkt->length%4;
+}
 
-uint32_t crc = htons((const uint32_t)crc32 (0, (const Bytef *)buf, *len - 4));
-  buf[4 + (pkt->length) + (pkt->length)%4] = (char) (crc>> 24);
-  buf[5 + (pkt->length)+(pkt->length)%4] = (char) (crc >> 16);
-  buf[6 + (pkt->length)+(pkt->length)%4] = (char) (crc >> 8);
-  buf[7 + (pkt->length)+(pkt->length)%4] = (char) crc;
-  *len = 7 + (pkt->length);
+ uint32_t crc = htonl((const uint32_t)crc32 (0, (const Bytef *)buf, *len - 4));
+  buf[4 + (pkt->length) + padding] = (char) (crc>> 24);
+  buf[5 + (pkt->length)+ padding] = (char) (crc >> 16);
+  buf[6 + (pkt->length)+ padding] = (char) (crc >> 8);
+  buf[7 + (pkt->length)+ padding] = (char) crc;
+  *len = 8 + (pkt->length);
+  for(i=11;i>=0;i--){
+ printBits(1,&buf[i]);
+}
   return PKT_OK;
 }
 
@@ -258,13 +293,15 @@ return PKT_OK;
 }
 
 
+
 int main(int argc, char *argv[]){
 	pkt_t * pkt = malloc(sizeof(pkt_t));
-	pkt->type=PTYPE_DATA;
+        pkt_t * pkt2 = malloc(sizeof(pkt_t));
+	pkt->type=PTYPE_DATA;// 1
 	pkt->window=3;
 	pkt->seqnum=1;
-	pkt->length=7;
-	char * payload = "abcdef"; // avec \0, 7 charactères
+	pkt->length=5;
+	char * payload = "abcd"; // avec \0, 7 charactères
 	pkt->payload= payload;
 
 	size_t buffersize = 8 + pkt->length; // taille fixe + taille payload
@@ -272,14 +309,19 @@ int main(int argc, char *argv[]){
 		buffersize = buffersize + 4 - (pkt->length % 4); // + padding
 	}
 	char * buffer=(char *) malloc((size_t)buffersize);
-
-
+        printBits(12, pkt);
+        int padding = 0;
+if(pkt->length%4 != 0){
+padding = 4 - pkt->length%4;
+}
 	printf("inencode\n");
 	pkt_encode(pkt, buffer, &buffersize);
 	printf("outencode\n");
 	printf("indecode\n");
-	pkt_decode(buffer, buffersize, pkt);
+        pkt->payload = "sdvdsqv";
+	pkt_decode(buffer, buffersize + padding, pkt2);
 	printf("outdecode\n");
-	printf("type %d, window %d, seqnum %d, length %d, payload %s, crc %d\n", pkt->type, pkt->window, pkt->seqnum, pkt->length, pkt->payload,pkt->crc);
+        printBits(12, pkt);
+	printf("type %d, window %d, seqnum %d, length %d, payload %s, crc %d\n", pkt2->type, pkt2->window, pkt2->seqnum, pkt2->length, pkt2->payload,pkt2->crc);
 	
 }
