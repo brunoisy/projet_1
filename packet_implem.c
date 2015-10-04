@@ -57,12 +57,12 @@ pkt->length = ntohs(pkt->length); // endianness !!
   pkt->seqnum = data[1];
   pkt->length = data[2];
   pkt->length = pkt->length << 8;
-  pkt-length = pkt->length | data[3];  
+  pkt->length = pkt->length | data[3];  
   pkt->length = ntohs(pkt->length); // endianness !!
 >>>>>>> d480ee42aca0cde6541597a0e731fa82068a8a1b
 
   //placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
-  if (type != PTYPE_DATA && type != PTYPE_ACK && type != PTYPE_NACK)
+  if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK && pkt->type != PTYPE_NACK)
     {
       return E_TYPE;
     }
