@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 
 
+
+
 struct __attribute__ ((__packed__)) pkt
 {
   ptypes_t type:3;
@@ -253,4 +255,31 @@ pkt_set_payload (pkt_t * pkt, const char *data, const uint16_t length)
     }
 return PKT_OK;
 
+}
+
+
+int main(int argc, char *argv[]){
+	pkt_t * pkt = malloc(sizeof(pkt_t));
+	pkt->type=PTYPE_DATA;
+	pkt->window=3;
+	pkt->seqnum=1;
+	pkt->length=7;
+	char * payload = "abcdef"; // avec \0, 7 charactères
+	pkt->payload= payload;
+
+	size_t buffersize = 8 + pkt->length; // taille fixe + taille payload
+	if(pkt->length % 4 != 0){
+		buffersize = buffersize + 4 - (pkt->length % 4); // + padding
+	}
+	char * buffer=(char *) malloc((size_t)buffersize);
+
+
+	printf("inencode\n");
+	pkt_encode(pkt, buffer, &buffersize);
+	printf("outencode\n");
+	printf("indecode\n");
+	pkt_decode(buffer, buffersize, pkt);
+	printf("outdecode\n");
+	printf("type %d, window %d, seqnum %d, length %d, payload %s, crc %d\n", pkt->type, pkt->window, pkt->seqnum, pkt->length, pkt->payload,pkt->crc);
+	
 }
