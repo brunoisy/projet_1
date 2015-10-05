@@ -9,8 +9,8 @@
 void printBits(size_t const size, void const *const ptr);
 
 struct __attribute__ ((__packed__)) pkt {
-	unsigned int type:3;
-	unsigned int window:5;
+	ptype_t type:3;
+	uint8_t window:5;
 	uint8_t seqnum;
 	uint16_t length;
 	char *payload;
@@ -23,7 +23,7 @@ pkt_t *pkt_new()
 	return ret;
 }
 
-
+//Free payload ?
 void pkt_del(pkt_t * pkt)
 {
 	free(pkt->payload);
@@ -34,17 +34,34 @@ void pkt_del(pkt_t * pkt)
 
 pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 {
-	if (len < 8) {		// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
-		return E_NOHEADER;
-	}
+	if(len < 4){
+           return E_NOHEADER;
+       }
 
-	pkt->type = data[0] >> 5;
-	pkt->window = data[0];
-	pkt->seqnum = data[1];
+        if (len < 8) {		// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
+		return E_UNCONSISTENT;
+	}
+        if(len%4 != 0){
+          return E_UNCONSISTENT;
+        }
+
+        if((pkt->type == PTYPE_ACK || pkt->type == PTYPE_NACK) && len > 0){
+         return E_UNCONSISTENT;
+        }
+       
+
+	int err = pkt_set_type(pkt,data[0] >> 5);
+	int err2 =pkt_set_window(pkt, (data[0]<<3)>>3);
+	int err3 = pkt_set_seqnum(pkt,data[1]);
 	pkt->length = data[2];
 	pkt->length = pkt->length << 8;
 	pkt->length = pkt->length | data[3];
-	pkt->length = ntohs(pkt->length);	// endianness !!
+	int err4 = pkt_set_length(pkt,ntohs(pkt->length));	// endianness !!
+
+        if(err!=PKT_OK){return err;}
+if(err2!=PKT_OK){return err2;}
+if(err3!=PKT_OK){return err3;}
+if(err4!=PKT_OK){return err4;}
 
 	//placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
 	if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK
@@ -60,7 +77,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	if (pkt->length % 4 != 0) {
 		padding = 4 - pkt->length % 4;
 	}
-
+   
 	printf("PADDING:%d\n", padding);
 
 	if (pkt->length + 8 + padding > (uint16_t) len) {	// <= ou != ?
@@ -77,12 +94,15 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 
 	int i;
 
-	pkt->payload = (char *)malloc(pkt->length * sizeof(char));
+	char * payload = (char *)malloc(pkt->length * sizeof(char));
+
 
 	for (i = 0; i < pkt->length; i++) {
-		(pkt->payload)[i] = data[4 + i];
+		payload[i] = data[4 + i];
 	}
 
+        int err5 = pkt_set_payload(pkt,payload,pkt->length);
+        free(payload);
 	int startcrcbyte = 4 + pkt->length + padding;
 
 	pkt->crc = 0;
@@ -95,13 +115,16 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 		pkt->crc = pkt->crc | inter;
 	}
 
-	pkt->crc = ntohl(pkt->crc);	// endianness!!
+	int err6 = pkt_set_crc(pkt,ntohl(pkt->crc));	
+        if(err5!=PKT_OK){return err5;}
+        if(err6!=PKT_OK){return err6;}
+// endianness!!
 
 	printf("decode_crc from buffer : %u\n", pkt->crc);
 
-	uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4);	//crc calculé sans le padding
+	uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
 
-	printf("decode_crc calculated from buffer : %u\n", thiscrc);
+	printf("decode_crc calculated = %u\n", thiscrc);
 
 	if (pkt->crc != thiscrc) {	// passage barbare de int à uint
 		return E_CRC;
@@ -118,21 +141,16 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	return PKT_OK;
 }
 
-// ENDIANNESS?
-
 pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 {
 
-	if ((uint16_t) (*len) < 8 + (pkt->length)) {
-		return E_NOMEM;
-	}
-
-	int length_to_encode = htons(pkt->length);
-
-	buf[0] = (pkt->type << 5) + pkt->window;
+	buf[0] = ((char)pkt->type) << 5 | (char)pkt->window;
 	buf[1] = pkt->seqnum;
-	buf[2] = (char)(length_to_encode >> 8);
-	buf[3] = (char)length_to_encode;
+	uint16_t length = pkt_get_length(pkt);
+	uint16_t ordering = htons(length);
+	buf[2] = ordering & 0xFF;
+	buf[3] = ordering>>8;
+
 	int i;
 	for (i = 0; i < pkt->length; i++) {
 		buf[4 + i] = (pkt->payload)[i];
@@ -147,23 +165,29 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 		buf[4 + pkt->length + i] = 0b00000000;
 	}
 
-	uint32_t crc = htonl((const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4));	//on calcule le crc sur le header et le payload
+	uint32_t crc = htonl((const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4 + padding));	//on calcule le crc sur le header et le payload
 	
 
+	//printf("encode_crc :%u\n",
+	       //(const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4));
 
-	buf[4 + (pkt->length) + padding] = (char)(crc >> 24);
-	buf[5 + (pkt->length) + padding] = (char)(crc >> 16);
-	buf[6 + (pkt->length) + padding] = (char)(crc >> 8);
-	buf[7 + (pkt->length) + padding] = (char)crc; 
-	*len = 8 + (pkt->length) + padding;
+	buf[7 + (pkt->length) + padding] = (char)(crc >> 24);
+	buf[6 + (pkt->length) + padding] = (char)(crc >> 16);
+	buf[5 + (pkt->length) + padding] = (char)(crc >> 8);
+	buf[4 + (pkt->length) + padding] = (char)crc; 
+	
 
-	printf("buf dans encode\n");
-	for (i = 1; i <= pkt->length + padding + 8; i++) {
+	//printf("buf dans encode\n");
+	/*for (i = 1; i <= pkt->length + padding + 8; i++) {
 		printBits(1, &buf[i - 1]);
 		if (i % 4 == 0 && i != 0) {
 			printf("\n");
 		}
+	}*/
+        if ((uint16_t) (*len) < 8 + (pkt->length)+padding) {
+		return E_NOMEM;
 	}
+        *len = 8 + (pkt->length) + padding;
 
 	return PKT_OK;
 }
@@ -267,31 +291,51 @@ pkt_set_payload(pkt_t * pkt, const char *data, const uint16_t length)
 
 int main(int argc, char *argv[])
 {
-
+	//pkt_t *pkt = (pkt_t *) malloc(sizeof(pkt_t));
+	//pkt_t *pkt2 = (pkt_t *) malloc(sizeof(pkt_t));
         pkt_t * pkt = pkt_new();
-	pkt_t * pkt2 = pkt_new();
-        char * data = (char *)malloc(2);
-        data[0] = 'a';
-        data[1] = 'r';
-
-        if(pkt_set_payload(pkt,data,2)!=PKT_OK){
+        pkt_t * pkt2 = pkt_new();
+        
+	//pkt->type = PTYPE_DATA;	// 1
+        if(pkt_set_type(pkt,PTYPE_NACK)!=PKT_OK){
+         printf("ERROR SET TYPE\n");
+        } 
+        
+        if(pkt_set_window(pkt,3)!=PKT_OK){
+         printf("ERROR SET WINDOW\n");
+        } 
+        if(pkt_set_seqnum(pkt,1)!=PKT_OK){
+         printf("ERROR SET SEQNUM\n");
+        } 
+        if(pkt_set_length(pkt,50)!=PKT_OK){
+         printf("ERROR SET LENGTH\n");
+        } 
+        char * data = (char *)malloc(50);
+        int i;
+        for(i=0;i<50;i++){
+         data[i] = 'a';
+        }
+        
+        if(pkt_set_payload(pkt,data,pkt->length)!=PKT_OK){
          printf("ERROR SET PAYLOAD\n");
         } 
-	
+	//pkt->window = 3;
+	//pkt->seqnum = 1;
+	//pkt->length = 2;
+	//pkt->payload = (char *)malloc(pkt->length);
+
+	//pkt->payload[0] = 'a';
+	//pkt->payload[1] = 'c';
 
 	size_t buffersize = 8 + pkt->length;	// taille fixe + taille payload
 	if (pkt->length % 4 != 0) {
 		buffersize = buffersize + 4 - (pkt->length % 4);	// + padding
 	}
-
-
 	char *buffer = (char *)malloc((size_t) buffersize);
 	int padding = 0;
 	if (pkt->length % 4 != 0) {
 		padding = 4 - pkt->length % 4;
 	}
-
-
 	printf("inencode\n");
 	pkt_encode(pkt, buffer, &buffersize);
 	printf("outencode\n");
