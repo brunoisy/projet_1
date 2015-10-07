@@ -3,13 +3,9 @@
 #include <CUnit/Basic.h>
 #include "packet_interface.h"
 
-
-void test_new(void);
-void test_setters(void);
-void test_getters(void);
-void test_del(void);
-void test_encode(void);
-void test_decode(void);
+void test_getters_setters(void);
+void test_encode_decode(void);
+void printBits(size_t const size, void const *const ptr);
 
 int main(int argc, char *argv[])
 {
@@ -27,11 +23,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Ajoute les tests à la suite */
-	if ((NULL == CU_add_test(pSuite, "test setters", test_setters)) ||
-	    (NULL == CU_add_test(pSuite, "test getters", test_getters)) ||
-	    (NULL == CU_add_test(pSuite, "test del", test_del)) ||
-	    (NULL == CU_add_test(pSuite, "test encode", test_encode)) ||
-	    (NULL == CU_add_test(pSuite, "test decode", test_decode))) {
+	if ((NULL == CU_add_test(pSuite, "test setters", test_getters_setters))
+	    || (NULL == CU_add_test(pSuite, "test encode", test_encode_decode))) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}
@@ -46,63 +39,61 @@ int main(int argc, char *argv[])
 
 }
 
-
-
-void test_setters(void)
+void test_getters_setters(void)
 {
-	pkt_t * pkt = pkt_new();
+	pkt_t *pkt = pkt_new();
+
 	const ptypes_t type = PTYPE_DATA;
 	const uint8_t window = 19;
-	const uint8_t seqnum = 5;
-	const uint16_t length = 34;
-	const uint32_t crc = 123456;
+	const uint8_t seqnum = 7;
+	const uint16_t length1 = 34;
+	const uint16_t length2 = 5;
+	const uint32_t crc = 123465;
+	const char *payload = "abcd";
 
 	const ptypes_t badType = 7;
-	const uint8_t  badWindow = 34;
+	const uint8_t badWindow = 34;
 	const uint16_t badLength = 515;
 	//pas de badSeqnum, badCrc, impossible.
 
-	CU_ASSERT(pkt_set_type(pkt, type)==PKT_OK);
-	CU_ASSERT(pkt_set_window(pkt, window)==PKT_OK);
-	CU_ASSERT(pkt_set_seqnum(pkt, seqnum)==PKT_OK);
-	CU_ASSERT(pkt_set_length(pkt, length)==PKT_OK);
-	CU_ASSERT(pkt_set_crc(pkt, crc)==PKT_OK);
+	// sets corrects 
+	CU_ASSERT(pkt_set_type(pkt, type) == PKT_OK);
+	CU_ASSERT(pkt_set_window(pkt, window) == PKT_OK);
+	CU_ASSERT(pkt_set_seqnum(pkt, seqnum) == PKT_OK);
+	CU_ASSERT(pkt_set_length(pkt, length1) == PKT_OK);
+	CU_ASSERT(pkt_set_crc(pkt, crc) == PKT_OK);
+	CU_ASSERT(pkt_set_payload(pkt, payload, length2) == PKT_OK);
 
-	
-	CU_ASSERT(pkt_set_type(pkt, badType)==E_TYPE);
-	CU_ASSERT(pkt_set_window(pkt, badWindow)==E_WINDOW);
-	CU_ASSERT(pkt_set_length(pkt, badLength)==E_LENGTH);
+	// gets
+	CU_ASSERT(pkt_get_type(pkt) == type);
+	CU_ASSERT(pkt_get_window(pkt) == window);
+	CU_ASSERT(pkt_get_seqnum(pkt) == seqnum);
+	CU_ASSERT(pkt_get_length(pkt) == length2);	//on vérifie que la longeur a bien été modifiée par setPayload
+	CU_ASSERT(pkt_get_crc(pkt) == crc);
+	//vérifier get payload? 
+
+	CU_ASSERT(pkt_set_type(pkt, badType) == E_TYPE);
+	CU_ASSERT(pkt_set_window(pkt, badWindow) == E_WINDOW);
+	CU_ASSERT(pkt_set_length(pkt, badLength) == E_LENGTH);
+	CU_ASSERT(pkt_set_payload(pkt, payload, badLength) == E_LENGTH);
+
+	pkt_del(pkt);		//éviter memoryleaks
 }
 
-void test_getters(void)
+void test_encode_decode(void)
 {
-}
 
-void test_del(void)
-{
-}
-
-void test_encode(void)
-{
-}
-
-void test_decode(void)
-{
-}
-
-/*
 	pkt_t *pkt = pkt_new();
 	pkt_t *pkt2 = pkt_new();
 
-	pkt_set_type(pkt, PTYPE_ACK);
+	pkt_set_type(pkt, PTYPE_DATA);
 	pkt_set_window(pkt, 3);
 	pkt_set_seqnum(pkt, 4);
 	char *data = (char *)malloc(2);
 	data[0] = 'a';
 	data[1] = 'r';
-	if (pkt_set_payload(pkt, data, 2) != PKT_OK) {
-		printf("ERROR SET PAYLOAD\n");
-	}
+
+	pkt_set_payload(pkt, data, 2);
 
 	int padding = 0;
 	if (pkt_get_length(pkt) % 4 != 0) {
@@ -111,10 +102,12 @@ void test_decode(void)
 	size_t buffersize = 8 + pkt_get_length(pkt) + padding;	// taille fixe + taille payload
 
 	char *buffer = (char *)malloc((size_t) buffersize);
+	printf
+	    ("pkt initial : type %d, window %d, seqnum %d, length %d\n",
+	     pkt_get_type(pkt), pkt_get_window(pkt), pkt_get_seqnum(pkt),
+	     pkt_get_length(pkt));
 
-	printf("inencode\n");
 	pkt_encode(pkt, buffer, &buffersize);
-	printf("outencode\n");
 
 	printf("buffer après encode\n");
 	int i;
@@ -125,16 +118,31 @@ void test_decode(void)
 		}
 	}
 
-	printf("indecode\n");
 	pkt_decode(buffer, buffersize, pkt2);
-	printf("outdecode\n");
 
-	printf("type %d, window %d, seqnum %d, length %d, crc %u\n",
-	       pkt_get_type(pkt2), pkt_get_window(pkt2), pkt_get_seqnum(pkt2),
-	       pkt_get_length(pkt2), pkt_get_crc(pkt2));
+	printf
+	    ("pkt décodé : type %d, window %d, seqnum %d, length %d, crc %u\n",
+	     pkt_get_type(pkt2), pkt_get_window(pkt2), pkt_get_seqnum(pkt2),
+	     pkt_get_length(pkt2), pkt_get_crc(pkt2));
 
 	free(buffer);
 	pkt_del(pkt);
 	pkt_del(pkt2);
+
 }
-*/
+
+void printBits(size_t const size, void const *const ptr)
+{
+	unsigned char *b = (unsigned char *)ptr;
+	unsigned char byte;
+	int i, j;
+
+	for (i = size - 1; i >= 0; i--) {
+		for (j = 7; j >= 0; j--) {
+			byte = b[i] & (1 << j);
+			byte >>= j;
+			printf("%u", byte);
+		}
+	}
+	printf(" ");
+}

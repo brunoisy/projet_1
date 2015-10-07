@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-void printBits(size_t const size, void const *const ptr);
 
 struct __attribute__ ((__packed__)) pkt {
 	ptypes_t type:3;
@@ -36,18 +35,6 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 		return E_NOHEADER;
 	}
 
-	if (len < 8) {		// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
-		return E_UNCONSISTENT;
-	}
-
-	if (len % 4 != 0) {	// si la taille du packet ne respecte pas l'allignement sur 4 bytes
-		return E_UNCONSISTENT;
-	}
-/*
-	if ((pkt_get_type(pkt) == PTYPE_ACK || pkt->type == PTYPE_NACK) && len > 0) {
-		return E_UNCONSISTENT;
-		}
-*///pkt type pas initialisé + len > 0 ? bizarre!
 
 	//initialisation du header
 	pkt_status_code err = pkt_set_type(pkt, data[0] >> 5);
@@ -60,11 +47,20 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	length = length | data[2];
 	pkt_status_code err4 = pkt_set_length(pkt, ntohs(length));	// endianness !!
 
+
+	if (len < 8) {		// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
+		return E_UNCONSISTENT;
+	}
+
+	if (len % 4 != 0) {	// si la taille du packet ne respecte pas l'allignement sur 4 bytes
+		return E_UNCONSISTENT;
+	}
+
 	//vérification erreurs du header
 	if (err != PKT_OK) {
 		return err;
 	}
-	if (err2 != PKT_OK) {	// potentiellement problématique
+	if (err2 != PKT_OK) {	// potentiellement problématique (inginious)
 		return err2;
 	}
 	if (err3 != PKT_OK) {
@@ -78,19 +74,25 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	    && pkt->type != PTYPE_NACK) {
 		return E_TYPE;
 	}
+ 
+	if (pkt_get_type(pkt) != PTYPE_DATA && pkt_get_length(pkt) > 0 ) { //si le type n'est pas data, la longueur du payload est nulle
+		return E_UNCONSISTENT;
+	}
+
+
 
 	int padding = 0;
 	if (pkt_get_length(pkt) % 4 != 0) {
 		padding = 4 - pkt_get_length(pkt) % 4;
 	}
 
-	if (pkt_get_length(pkt) + 8 + padding != (uint16_t) len) {	// si la longeur du package != len    
+	if (pkt_get_length(pkt) + 8 + padding != (uint16_t) len) {// si la longeur du package != len    
 		return E_UNCONSISTENT;
 	}
 
 	char *payload = (char *)malloc(pkt_get_length(pkt) * sizeof(char));
 	int i;
-	for (i = 0; i < pkt_get_length(pkt); i++) {	// initialisation du payload
+	for (i = 0; i < pkt_get_length(pkt); i++) {// initialisation du payload
 		payload[i] = data[4 + i];
 	}
 
@@ -101,22 +103,19 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	int startcrcbyte = 4 + pkt_get_length(pkt) + padding;
 
 	uint32_t crc = 0;
-	uint32_t ithByte;	// le ième byte de crc
+	uint32_t ithByte;// le ième byte de crc
 	uint32_t inter;
 	for (i = 3; i >= 0; i--) {
 		crc = crc << 8;
 		ithByte = (uint32_t) data[startcrcbyte + i];
-		inter = 0 b00000000000000000000000011111111 & ithByte;
+		inter = 0b00000000000000000000000011111111 & ithByte;
 		crc = crc | inter;
 	}
 
 	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(crc));	// endianness!!
 
-	printf("decode_crc from buffer : %u\n", pkt_get_crc(pkt));
-
 	uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
 
-	printf("decode_crc calculated = %u\n", thiscrc);
 
 	if (pkt_get_crc(pkt) != thiscrc) {
 		return E_CRC;
@@ -152,9 +151,10 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 	}
 
 	for (i = 0; i < padding; i++) {
-		buf[4 + pkt_get_length(pkt) + i] = 0 b00000000;
+		buf[4 + pkt_get_length(pkt) + i] = 0b00000000;
 	}
 
+	
 	uint32_t crc = htonl((const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4 + padding));	//on calcule le crc sur le header et le payload
 
 	buf[4 + pkt_get_length(pkt) + padding] = (char)crc;
@@ -261,76 +261,9 @@ pkt_set_payload(pkt_t * pkt, const char *data, const uint16_t length)
 		pkt->payload[i] = data[i];
 	}
 	for (i = 0; i < padding; i++) {
-		pkt->payload[length + i] = 0 b00000000;
+		pkt->payload[length + i] = 0b00000000;
 	}
 	pkt->length = length;
 	return PKT_OK;
-
-}
-
-void printBits(size_t const size, void const *const ptr)
-{
-	unsigned char *b = (unsigned char *)ptr;
-	unsigned char byte;
-	int i, j;
-
-	for (i = size - 1; i >= 0; i--) {
-		for (j = 7; j >= 0; j--) {
-			byte = b[i] & (1 << j);
-			byte >>= j;
-			printf("%u", byte);
-		}
-	}
-	printf(" ");
-}
-
-int main(int argc, char *argv[])
-{
-
-	pkt_t *pkt = pkt_new();
-	pkt_t *pkt2 = pkt_new();
-
-	pkt_set_type(pkt, PTYPE_ACK);
-	pkt_set_window(pkt, 3);
-	pkt_set_seqnum(pkt, 4);
-	char *data = (char *)malloc(2);
-	data[0] = 'a';
-	data[1] = 'r';
-	if (pkt_set_payload(pkt, data, 2) != PKT_OK) {
-		printf("ERROR SET PAYLOAD\n");
-	}
-
-	int padding = 0;
-	if (pkt->length % 4 != 0) {
-		padding = 4 - (pkt->length % 4);
-	}
-	size_t buffersize = 8 + pkt->length + padding;	// taille fixe + taille payload
-
-	char *buffer = (char *)malloc((size_t) buffersize);
-
-	printf("inencode\n");
-	pkt_encode(pkt, buffer, &buffersize);
-	printf("outencode\n");
-
-	printf("buffer après encode\n");
-	int i;
-	for (i = 1; i <= pkt->length + padding + 8; i++) {
-		printBits(1, &buffer[i - 1]);
-		if (i % 4 == 0 && i != 0) {
-			printf("\n");
-		}
-	}
-
-	printf("indecode\n");
-	pkt_decode(buffer, buffersize, pkt2);
-	printf("outdecode\n");
-
-	printf("type %d, window %d, seqnum %d, length %d, crc %u\n",
-	       pkt_get_type(pkt2), pkt_get_window(pkt2), pkt_get_seqnum(pkt2),
-	       pkt_get_length(pkt2), pkt_get_crc(pkt2));
-
-	free(buffer);
-	pkt_del(pkt);
-	pkt_del(pkt2);
 
 }
