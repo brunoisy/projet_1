@@ -9,7 +9,7 @@
 void printBits(size_t const size, void const *const ptr);
 
 struct __attribute__ ((__packed__)) pkt {
-	ptype_t type:3;
+	ptypes_t type:3;
 	uint8_t window:5;
 	uint8_t seqnum;
 	uint16_t length;
@@ -58,11 +58,11 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	pkt->length = pkt->length | data[3];
 	int err4 = pkt_set_length(pkt,ntohs(pkt->length));	// endianness !!
 
-        if(err!=PKT_OK){return err;}
-if(err2!=PKT_OK){return err2;}
+      /*  if(err!=PKT_OK){return err;}
+//if(err2!=PKT_OK){return err2;}
 if(err3!=PKT_OK){return err3;}
 if(err4!=PKT_OK){return err4;}
-
+*/
 	//placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
 	if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK
 	    && pkt->type != PTYPE_NACK) {
@@ -177,13 +177,15 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 	buf[4 + (pkt->length) + padding] = (char)crc; 
 	
 
-	//printf("buf dans encode\n");
-	/*for (i = 1; i <= pkt->length + padding + 8; i++) {
+	printf("buf dans encode\n");
+	for (i = 1; i <= pkt->length + padding + 8; i++) {
 		printBits(1, &buf[i - 1]);
 		if (i % 4 == 0 && i != 0) {
 			printf("\n");
 		}
-	}*/
+	}
+
+
         if ((uint16_t) (*len) < 8 + (pkt->length)+padding) {
 		return E_NOMEM;
 	}
@@ -289,53 +291,39 @@ pkt_set_payload(pkt_t * pkt, const char *data, const uint16_t length)
 
 }
 
+
+/*
 int main(int argc, char *argv[])
 {
-	//pkt_t *pkt = (pkt_t *) malloc(sizeof(pkt_t));
-	//pkt_t *pkt2 = (pkt_t *) malloc(sizeof(pkt_t));
+
         pkt_t * pkt = pkt_new();
-        pkt_t * pkt2 = pkt_new();
-        
-	//pkt->type = PTYPE_DATA;	// 1
-        if(pkt_set_type(pkt,PTYPE_NACK)!=PKT_OK){
-         printf("ERROR SET TYPE\n");
-        } 
-        
-        if(pkt_set_window(pkt,3)!=PKT_OK){
-         printf("ERROR SET WINDOW\n");
-        } 
-        if(pkt_set_seqnum(pkt,1)!=PKT_OK){
-         printf("ERROR SET SEQNUM\n");
-        } 
-        if(pkt_set_length(pkt,50)!=PKT_OK){
-         printf("ERROR SET LENGTH\n");
-        } 
-        char * data = (char *)malloc(50);
-        int i;
-        for(i=0;i<50;i++){
-         data[i] = 'a';
-        }
-        
-        if(pkt_set_payload(pkt,data,pkt->length)!=PKT_OK){
+	pkt_t * pkt2 = pkt_new();
+	
+	pkt_set_type(pkt, PTYPE_ACK);
+	pkt_set_window(pkt, 3);
+	pkt_set_seqnum(pkt, 4);
+        char * data = (char *)malloc(2);
+        data[0] = 'a';
+        data[1] = 'r';
+
+        if(pkt_set_payload(pkt,data,2)!=PKT_OK){
          printf("ERROR SET PAYLOAD\n");
         } 
-	//pkt->window = 3;
-	//pkt->seqnum = 1;
-	//pkt->length = 2;
-	//pkt->payload = (char *)malloc(pkt->length);
-
-	//pkt->payload[0] = 'a';
-	//pkt->payload[1] = 'c';
+	
 
 	size_t buffersize = 8 + pkt->length;	// taille fixe + taille payload
 	if (pkt->length % 4 != 0) {
 		buffersize = buffersize + 4 - (pkt->length % 4);	// + padding
 	}
+
+
 	char *buffer = (char *)malloc((size_t) buffersize);
 	int padding = 0;
 	if (pkt->length % 4 != 0) {
 		padding = 4 - pkt->length % 4;
 	}
+
+
 	printf("inencode\n");
 	pkt_encode(pkt, buffer, &buffersize);
 	printf("outencode\n");
@@ -353,6 +341,8 @@ int main(int argc, char *argv[])
 	pkt_del(pkt2);
 
 }
+*/
+
 
 void printBits(size_t const size, void const *const ptr)
 {
