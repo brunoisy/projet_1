@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <zlib.h>
 #include <CUnit/Basic.h>
 #include "packet_interface.h"
 
 void test_getters_setters(void);
 void test_encode_decode(void);
-void printBits(size_t const size, void const *const ptr);
+int comparePayloads(void *, void *);
 
 int main(int argc, char *argv[])
 {
@@ -102,28 +103,40 @@ void test_encode_decode(void)
 	size_t buffersize = 8 + pkt_get_length(pkt) + padding;	// taille fixe + taille payload
 
 	char *buffer = (char *)malloc((size_t) buffersize);
-	printf
-	    ("pkt initial : type %d, window %d, seqnum %d, length %d\n",
-	     pkt_get_type(pkt), pkt_get_window(pkt), pkt_get_seqnum(pkt),
-	     pkt_get_length(pkt));
 
 	pkt_encode(pkt, buffer, &buffersize);
 
-	printf("buffer après encode\n");
-	int i;
-	for (i = 1; i <= pkt_get_length(pkt) + padding + 8; i++) {
-		printBits(1, &buffer[i - 1]);
-		if (i % 4 == 0 && i != 0) {
-			printf("\n");
-		}
-	}
+
+	char *goodbuffer = (char *)malloc((size_t) buffersize); // buffer sensé être obtenu après encode
+	goodbuffer[0]=0b00100011;
+	goodbuffer[1]=0b00000100;
+	goodbuffer[2]=0b00000000;
+	goodbuffer[3]=0b00000010;
+	goodbuffer[4]=0b01100001;
+	goodbuffer[5]=0b01110010;
+	goodbuffer[6]=0b00000000;
+	goodbuffer[7]=0b00000000;
+	
+	uint32_t goodcrc = (uint32_t)crc32(0, (const Bytef *)goodbuffer, 8);
+	uint32_t bigendiancrc = htonl(goodcrc);
+	goodbuffer[8]=(char)(bigendiancrc);
+	goodbuffer[9]=(char)(bigendiancrc >> 8);
+	goodbuffer[10]=(char)(bigendiancrc >> 16);
+	goodbuffer[11]=(char)(bigendiancrc >> 24);
+
+	CU_ASSERT(compareData(buffer,goodbuffer, 12)==0);
+
 
 	pkt_decode(buffer, buffersize, pkt2);
 
-	printf
-	    ("pkt décodé : type %d, window %d, seqnum %d, length %d, crc %u\n",
-	     pkt_get_type(pkt2), pkt_get_window(pkt2), pkt_get_seqnum(pkt2),
-	     pkt_get_length(pkt2), pkt_get_crc(pkt2));
+	
+
+	CU_ASSERT(pkt_get_type(pkt)==pkt_get_type(pkt2));
+	CU_ASSERT(pkt_get_window(pkt)==pkt_get_window(pkt2));
+	CU_ASSERT(pkt_get_seqnum(pkt)==pkt_get_seqnum(pkt2));
+	CU_ASSERT(pkt_get_length(pkt)==pkt_get_length(pkt2));	
+	CU_ASSERT(compareData(pkt_get_payload(pkt),pkt_get_payload(pkt2), (int)pkt_get_length(pkt))==0);
+	CU_ASSERT(pkt_get_crc(pkt2)==goodcrc);
 
 	free(buffer);
 	pkt_del(pkt);
@@ -131,18 +144,15 @@ void test_encode_decode(void)
 
 }
 
-void printBits(size_t const size, void const *const ptr)
-{
-	unsigned char *b = (unsigned char *)ptr;
-	unsigned char byte;
-	int i, j;
-
-	for (i = size - 1; i >= 0; i--) {
-		for (j = 7; j >= 0; j--) {
-			byte = b[i] & (1 << j);
-			byte >>= j;
-			printf("%u", byte);
+/* cette fonction renvoie 0 si les "lengths" premières données de x1 et x2 sont les mêmes, -1 si non
+*/
+int compareData(char * x1, char * x2, int length){
+	int i;
+	for(i=0; i<length; i++){
+		if(x1[i] != x2[i]){
+			return -1;
 		}
 	}
-	printf(" ");
+
+	return 0;	
 }
