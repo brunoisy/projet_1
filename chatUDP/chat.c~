@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
 	char *host = "::1";
 
 	while ((opt = getopt(argc, argv, "scp:h:")) != -1) {
+printf("hey");
 		switch (opt) {
 			case 's':
 				client = 0;

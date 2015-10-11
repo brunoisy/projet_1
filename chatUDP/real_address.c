@@ -1,5 +1,4 @@
 #include "real_address.h"
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -11,6 +10,7 @@
 
 const char *real_address(const char *address, struct sockaddr_in6 *rval)
 {
+	perror("inrealaddress");
 
 	struct addrinfo *myaddrinfo =
 	    (struct addrinfo *)malloc(sizeof(struct addrinfo));
@@ -23,5 +23,6 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval)
 	if (err != 0) {
 		return strerror(errno);
 	}
+	perror("real_address_retourne NULL");
 	return NULL;
 }
