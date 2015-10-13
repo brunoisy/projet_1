@@ -1,17 +1,18 @@
 #include "create_socket.h"
-#include <netinet/in.h>		/* * sockaddr_in6 */
-#include <sys/types.h>		/* sockaddr_in6 */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
+#include <arpa/inet.h>
 #include <string.h>
-
-int create_socket(struct sockaddr_in6 *source_addr, int src_port,
-		  struct sockaddr_in6 *dest_addr, int dst_port)
+int
+create_socket(struct sockaddr_in6 *source_addr, int src_port,
+	      struct sockaddr_in6 *dest_addr, int dst_port)
 {
-	perror("increatesocket");
 
-	int fDescr = socket(AF_INET6, SOCK_DGRAM, 17);	//17 est le nombre correspondant au protocole UDP 0?
+	int fDescr = socket(AF_INET6, SOCK_DGRAM, 17);	//17 est le nombre correspondant au protocole UDP
 	if (fDescr == -1) {
 		perror("socket");
 
@@ -23,7 +24,7 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port,
 	if (source_addr != NULL) {
 		//on insère les numéros de ports dans les structures sockaddr
 		if (src_port > 0) {
-			source_addr->sin6_port = src_port;
+			source_addr->sin6_port = htons(src_port);
 		}
 		if (bind(fDescr, (struct sockaddr *)source_addr, sizeof(*source_addr))) {	//on écoute le client
 			perror("bindtoclient");
@@ -33,7 +34,7 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port,
 		}
 	}
 
-	else {			//client
+	else {			// si client
 
 		if (bind(fDescr, (struct sockaddr *)dest_addr, sizeof(*dest_addr))) {	//on écoute le serveur, le port est assigné aléatoirement du coté client 
 			perror("bindtoserver");
@@ -43,7 +44,7 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port,
 		}
 
 		if (dst_port > 0 && dest_addr != NULL) {	//on veut se connecter à un port spécifique du server
-			dest_addr->sin6_port = dst_port;	//htons?        
+			dest_addr->sin6_port = htons(dst_port);	        
 		}
 
 		if (connect(fDescr, (struct sockaddr *)dest_addr, sizeof(*dest_addr))) {	// on se connecte au serveur
@@ -54,6 +55,6 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port,
 		}
 
 	}
-	perror("create_socke_retourne_OK");
+
 	return fDescr;
 }

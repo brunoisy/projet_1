@@ -1,5 +1,4 @@
 #include "wait_for_client.h"
-
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
 #include <stdlib.h>
@@ -10,30 +9,24 @@
 
 int wait_for_client(int sfd)
 {
-	perror("inwaitforclient");
-
-	struct sockaddr *source =
-	    (struct sockaddr *)malloc(sizeof(struct sockaddr));
-	//uint32_t length = (uint32_t)sizeof(struct sockaddr); 
+	
+	struct sockaddr_in6 *source =
+	    (struct sockaddr_in6 *)malloc(sizeof(struct sockaddr_in6));
+	
 	socklen_t length = (socklen_t) sizeof *source;
 
-	if (recvfrom(sfd, NULL, 0, 0, source, &length)) {
-		perror(strerror(errno));
-		perror("!!!!CARAMBA!");
-		free(source);
+	if (recvfrom
+	    (sfd, NULL, 0, MSG_PEEK, (struct sockaddr *)source, &length)) {
 
 		return -1;
 
 	}
-	if (connect(sfd, source, length)) {
-		perror(strerror(errno));
-		free(source);
-		perror("CARAMBA!");
+
+	if (connect(sfd, (struct sockaddr *)source, length)) {
+
 		return -1;
 	}
 
-	free(source);
-	perror("wait_for_client_retourne_0");
 	return 0;
 
 }
