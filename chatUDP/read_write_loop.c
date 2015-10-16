@@ -19,16 +19,16 @@ void read_write_loop(const int sfd)
 	while (stdin) { // Quid si EOF ?
 
 		FD_ZERO(&rdfs);
-		FD_SET(STDIN_FILENO, &rdfs);
+		FD_SET(0, &rdfs);
 		FD_SET(sfd, &rdfs);
 		if (select(sfd + 1, &rdfs, NULL, NULL, NULL) == -1) {
 			perror("select()");
 			exit(errno);
 		}
 
-		if (FD_ISSET(STDIN_FILENO, &rdfs)) {
+		if (FD_ISSET(0, &rdfs)) {
 
-			msg_size = read(STDIN_FILENO, buffer, max_msg_size);
+			msg_size = read(0, buffer, max_msg_size);
 
 			write(sfd, buffer, msg_size);
 			
@@ -37,7 +37,7 @@ void read_write_loop(const int sfd)
 
 			msg_size = read(sfd, buffer, max_msg_size);
 
-			write(STDOUT_FILENO, buffer, msg_size);
+			write(1, buffer, msg_size);
 			
 		}
 	}
