@@ -2,15 +2,3 @@ CFLAGS=-Wall -Werror -Wshadow -Wextra
 
 chat: chat.o read_write_loop.o create_socket.o real_address.o wait_for_client.o
 
-read_write_loop.o: read_write_loop.c
-	gcc -o read_write_loop.o -c read_write_loop.c
-
-create_socket.o: create_socket.c
-	gcc -o create_socket.o -c create_socket.c
-
-real_address.o: real_address.c
-	gcc -o real_address.o -c real_address.c 
-
-wait_for_client.o: wait_for_client.c
-	gcc -o wait_for_client.o -c wait_for_client.c 
-
