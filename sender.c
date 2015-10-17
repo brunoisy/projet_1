@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include "sel_repeat_write.c"
-//#include "chatUDP/wait_for_client"
-//#include "chatUDP/real_address"
-//#include "chatUDP/create_socket"
+#include "chatUDP/wait_for_client.c"
+#include "chatUDP/real_address.c"
+#include "chatUDP/create_socket.c"
 
 
 int main(int argc , char * argv[]){
@@ -33,14 +33,14 @@ int main(int argc , char * argv[]){
 
   struct sockaddr_in6 addr;  
 
-  char * error = real_address(hostname,&addr);
+  const char * error = real_address(hostname,&addr);
 
   if(error!=NULL){
-   fprintf(stderr, "Could not resolve hostname %s: %s\n", host, err);
+   fprintf(stderr, "Could not resolve hostname %s\n", hostname);
 		return EXIT_FAILURE;
   }
 
-  int socket = create_socket(hostname,port,NULL,-1);
+  int socket = create_socket(&addr,port,NULL,-1);
   if (socket > 0 && wait_for_client(socket) < 0) { 
 		fprintf(stderr,"Could not connect the socket after the first message.\n");
 		close(socket);
@@ -61,5 +61,6 @@ int main(int argc , char * argv[]){
   }
 
   sel_repeat_write(fd,socket);
+  
 
 }
