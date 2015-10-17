@@ -1,5 +1,5 @@
 #include "packet_interface.h"
-#include <zlib.h>
+//#include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <arpa/inet.h>
@@ -112,12 +112,12 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 		crc = crc | inter;
 	}
 
-	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(crc));	// endianness!!
+	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(0));	// endianness!!
 
-	uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
+	//uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
 
 
-	if (pkt_get_crc(pkt) != thiscrc) {
+	/*if (pkt_get_crc(pkt) != thiscrc) {
 		return E_CRC;
 	}
 	if (err5 != PKT_OK) {
@@ -125,7 +125,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	}
 	if (err6 != PKT_OK) {
 		return err6;
-	}
+	}*/
 
 	return PKT_OK;
 }
@@ -155,7 +155,8 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 	}
 
 	
-	uint32_t crc = htonl((const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4 + padding));	//on calcule le crc sur le header et le payload
+	//uint32_t crc = htonl((const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4 + padding));	//on calcule le crc sur le header et le payload
+        uint32_t crc = 0;
 
 	buf[4 + pkt_get_length(pkt) + padding] = (char)crc;
 	buf[5 + pkt_get_length(pkt) + padding] = (char)(crc >> 8);
