@@ -1,11 +1,11 @@
-#include "packet_interface.h"
+#include "real_address.h"
+#include "create_socket.h"
+
 #include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <arpa/inet.h>
-#include "chatUDP/wait_for_client"
-#include "chatUDP/real_address"
-#include "chatUDP/create_socket"
+
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in6 addr;
 	const char *err = real_address(hostname, &addr);
 	if (err) {
-		fprintf(stderr, "Could not resolve hostname %s: %s\n", host,
+		fprintf(stderr, "Could not resolve hostname %s: %s\n", hostname,
 			err);
 		return EXIT_FAILURE;
 	}
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	
 
 
-
+printf("before_sel_read\n");
 	sel_repeat_read(sfd);
 
 	close(sfd);
