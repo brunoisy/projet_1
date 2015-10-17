@@ -32,39 +32,45 @@ void sel_repeat_read(const int sfd)
 		pkt_t * pkt = pkt_new();
 		if(pkt_decode(pkt_buffer, sdu_size, pkt)){
 			pkt_del(pkt);
-			send_pkt(PTYPE_NACK, lastack);
+			send_pkt(PTYPE_NACK, lastack, sfd, window_size);
 		}
 		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), lastack+1) < window_size){
 			insert_pkt(lastack, receive_buffer, pkt);
+			window_size--;
 		}
 		else{
 			pkt_del(pkt);
-			send_pkt(PTYPE_NACK, lastack, sfd);
+			send_pkt(PTYPE_NACK, lastack, sfd, sfd, window_size);
 		}
 		
 		
 		int i;
 		for(i=0; i<window_size; i++){// on écrit les packets de receive buffer qui sont succéssifs à lastack
 			if(pkt_get_seqnum(receive_buffer[i]) == (lastack+1)%256){
-				//write(1, receive_buffer[i], sizeof(*(receive_buffer[i])));// write payload!
+				write_payload(1, receive_buffer[i]); // 1 ou -f ?
 				pkt_del(receive_buffer[i]);
+				window_size++;
 				lastack=(lastack+1)%256;
-				send_pkt(PTYPE_ACK, lastack);
+				send_pkt(PTYPE_ACK, lastack, sfd, window_size);
 			}
 			else{
 				break;
 			}
 		}
-		refresh(receive_buffer); //mettre a jour receive_buffer en enlevant les éléments lus
+		refresh(receive_buffer); //mettre a jour receive_buffer en enlevant les éléments lus, renvoi nbr élements vides
 		
 	}
 	
 }
 
-int send_pkt(ptypes_t ptype, int lastack, int sfd){
+int write_payload(int fds, pkt_t * pkt){
+	write(fds, pkt_get_payload(pkt), pkt_get_length(pkt));
+}
+
+int send_pkt(ptypes_t ptype, int lastack, int sfd, int window_size){
 	pkt_t * pkt = pkt_new();
 	pkt_set_type(pkt, ptype);
-	pkt_set_window(pkt, 0);
+	pkt_set_window(pkt, window_size);
 	pkt_set_seqnum(pkt, (lastack+1)%256);
 	pkt_set_length(pkt, 0);
 	
@@ -117,6 +123,7 @@ int refresh(pkt_t * buffer[MAX_WINDOW_SIZE]){
 			break;
 		}
 	}
+	int window= 0;
 }
 
 
@@ -133,8 +140,3 @@ int compare_seqnums(int lastack,  int seqnum1, int seqnum2){
 	}
 	return seqnum1-seqnum2;
 }
-
-
-
-
-

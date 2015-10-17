@@ -1,5 +1,5 @@
 #include "packet_interface.h"
-//#include <zlib.h>
+#include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <arpa/inet.h>
@@ -112,12 +112,12 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 		crc = crc | inter;
 	}
 
-	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(0));	// endianness!!
+	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(crc));	// endianness!!
 
-	//uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
+	uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
 
 
-	/*if (pkt_get_crc(pkt) != thiscrc) {
+	if (pkt_get_crc(pkt) != thiscrc) {
 		return E_CRC;
 	}
 	if (err5 != PKT_OK) {
@@ -125,7 +125,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 	}
 	if (err6 != PKT_OK) {
 		return err6;
-	}*/
+	}
 
 	return PKT_OK;
 }
