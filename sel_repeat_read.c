@@ -1,6 +1,6 @@
 #include "sel_repeat_read.h"
 #include "packet_interface.h"
-
+#include "packet_implem.c"
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
 #include <stdlib.h>
@@ -26,9 +26,9 @@ void sel_repeat_read(const int sfd)
 
 	ssize_t sdu_size;
 	while (1) { // Quid si EOF ?
-
+                printf("before read\n");
 		sdu_size = read(sfd, pkt_buffer, max_sdu_size); // buffer contient un nouveau packet
-	
+	        printf("after read\n");
 		pkt_t * pkt = pkt_new();
 		if(pkt_decode(pkt_buffer, sdu_size, pkt)){
 			pkt_del(pkt);
@@ -43,11 +43,16 @@ void sel_repeat_read(const int sfd)
 			send_pkt(PTYPE_NACK, lastack, sfd, sfd, window_size);
 		}
 		
-		
+		printf("packet is ok\n");
 		int i;
 		for(i=0; i<window_size; i++){// on écrit les packets de receive buffer qui sont succéssifs à lastack
+			if(receive_buffer[i]==NULL){
+				break;
+			}
 			if(pkt_get_seqnum(receive_buffer[i]) == (lastack+1)%256){
+                                printf("after if in while\n");
 				write_payload(1, receive_buffer[i]); // 1 ou -f ?
+                                printf("after write payload\n");
 				pkt_del(receive_buffer[i]);
 				receive_buffer[i]=NULL;
 				window_size++;
@@ -58,6 +63,7 @@ void sel_repeat_read(const int sfd)
 				break;
 			}
 		}
+                printf("before refresh\n");
 		refresh(receive_buffer); //mettre a jour receive_buffer en enlevant les éléments lus, renvoi nbr élements vides
 		
 	}

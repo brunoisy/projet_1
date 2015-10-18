@@ -77,13 +77,13 @@ void sel_repeat_write(int fd, int socket){
 
  while (1) { 
 
-
+        printf("debut de while(1)\n");
         int i;
         for(i=0; i < current_index_window; i++){
 
          clock_gettime (CLOCK_MONOTONIC, &(window[i]->finish));         
          
-         if( window[i]->finish.tv_sec - window[i]->start.tv_sec > 2.0){
+         if( window[i]->finish.tv_sec - window[i]->start.tv_sec > 5.0){
            clock_gettime (CLOCK_MONOTONIC, &(window[i]->start));     
            size_t data_size = (size_t)pkt_get_length(window[i]->packet)+8;
            char data[data_size];
@@ -93,21 +93,23 @@ void sel_repeat_write(int fd, int socket){
          }
       }
 
-
+        printf("apres verifier les timer\n");
 
 
 	FD_ZERO(&rdfs);
-        if(current_index_window>=limited_window_size){ //On peut envoyer un packet
+        if(current_index_window<limited_window_size){ //On peut envoyer un packet
+        printf("on met fd = %d dans rdfs\n", fd);
 	FD_SET(fd, &rdfs);
         }
         FD_SET(socket,&rdfs);
   
         
-
+printf("avant select\n");
  if (select(max_fd + 1, &rdfs, NULL, NULL, NULL) == -1) {
 			fprintf(stderr, "Error select");
 			exit(errno);
 		}
+printf("apres select");
 
  if (FD_ISSET(fd, &rdfs)) {
 
@@ -129,7 +131,8 @@ void sel_repeat_write(int fd, int socket){
         struct timespec finish;
         struct pkt_timer element = {start,finish,packet};
         window[current_index_window] = &element;
-        current_index_window++;    
+        current_index_window++; 
+        printf("lecture et ecriture de 1 packet\n");   
         write(socket,data,data_size);
         
  }
