@@ -1,6 +1,7 @@
 #include "sel_repeat_read.h"
 #include "packet_interface.h"
-#include "packet_implem.c"
+#include "packet_interface.h"
+
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
 #include <stdlib.h>
@@ -100,12 +101,14 @@ int insert_pkt(int lastack, pkt_t * buffer[MAX_WINDOW_SIZE], pkt_t * pkt){
 			break;
 		}
 		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), pkt_get_seqnum(buffer[i])) < 0){
-			pkt_t * next = buffer[i];
+			pkt_t * this = buffer[i];
+			pkt_t * next;
 			buffer[i]=pkt;
 			int j;
 			for(j=1; j<MAX_WINDOW_SIZE-i; j++){
 				next=buffer[i+j];
-				buffer[i+j]=next;
+				buffer[i+j]=this;
+				this=next;
 				
 			}
 			break;
