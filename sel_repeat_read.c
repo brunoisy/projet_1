@@ -34,7 +34,7 @@ void sel_repeat_read(const int sfd)
 			pkt_del(pkt);
 			send_pkt(PTYPE_NACK, lastack, sfd, window_size);
 		}
-		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), lastack+1) < window_size){
+		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), lastack+1) < window_size){ //si le numéro de seq est dans la fenêtre
 			insert_pkt(lastack, receive_buffer, pkt);
 			window_size--;
 		}
@@ -49,6 +49,7 @@ void sel_repeat_read(const int sfd)
 			if(pkt_get_seqnum(receive_buffer[i]) == (lastack+1)%256){
 				write_payload(1, receive_buffer[i]); // 1 ou -f ?
 				pkt_del(receive_buffer[i]);
+				receive_buffer[i]=NULL;
 				window_size++;
 				lastack=(lastack+1)%256;
 				send_pkt(PTYPE_ACK, lastack, sfd, window_size);
@@ -97,8 +98,9 @@ int insert_pkt(int lastack, pkt_t * buffer[MAX_WINDOW_SIZE], pkt_t * pkt){
 			buffer[i]=pkt;
 			int j;
 			for(j=1; j<MAX_WINDOW_SIZE-i; j++){
+				next=buffer[i+j];
 				buffer[i+j]=next;
-				next=buffer[i+j+1];
+				
 			}
 			break;
 		}
