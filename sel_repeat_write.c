@@ -109,7 +109,7 @@ void sel_repeat_write(int fd, int socket)
 			fprintf(stderr, "Error select");
 			exit(errno);
 		}
-		printf("apres select");
+		printf("apres select\n");
 
 		if (FD_ISSET(fd, &rdfs)) {
 
@@ -119,6 +119,7 @@ void sel_repeat_write(int fd, int socket)
 			pkt_t *packet = pkt_new();
 			pkt_set_type(packet, PTYPE_DATA);
 			pkt_set_seqnum(packet, seqnum);
+printf("seqnum packet dans sel_repeat_write : %d\n", seqnum);
 			pkt_set_window(packet, 0);
 			pkt_set_length(packet, (uint16_t) real_payload_size);
 			pkt_set_payload(packet, buffer, real_payload_size);
