@@ -45,26 +45,61 @@ void test_modify_buffer(void){
  struct timespec b;
  
  uint8_t seqnum = 0;
- struct pkt_timer * window[max_window_size];
+ struct pkt_timer * window[31];
  
- for(int i
+ for(int i=0;i<20;i++){
+  
+  pkt_t packet = pkt_new();
+  pkt_set_seqnum(&packet,seqnum);
+  seqnum = (seqnum+1)%256;
+  pkt_timer bbb = {a,b,packet};
+  window[i] = &bbb;
 
+ }
 
+ //Imaginons un ack avec comme numero de sequence 12 et qui valide donc le seqnum 11.
+ 
+ int ack_position = get_ack_position(19,11,19);
+ modify_buffer(ack_postion,19,window);
 
+ for(int i=0;i<8;i++){
+ printf("Seqnum of %d th element : %d\n", i, window[i]->packet->seqnum);
+ CU_ASSERT(window[i]->packet->seqnum == 12+i);
+ }
 
+ seqnum = 250;
 
+ for(int i=0;i<31;i++){
+  
+  
+  window[i] = NULL;
 
+ }
 
+ for(int i=0;i<20 ;i++){
+  
+  pkt_t packet = pkt_new();
+  pkt_set_seqnum(&packet,seqnum);
+  seqnum = (seqnum+1)%256;
+  pkt_timer bbb = {a,b,packet};
+  window[i] = &bbb;
 
+ }
 
+ 
+ //Imaginons un ack avec comme numero de sequence 253 et qui valide donc le seqnum 252.
+ 
+ int ack_position = get_ack_position(13,252,19);
+ modify_buffer(ack_postion,19,window);
 
-
-
-
-
-
-
-
+ for(int i=0;i<17;i++){
+ printf("Seqnum of %d th element : %d\n", i, window[i]->packet->seqnum);
+ if(i<2){
+ CU_ASSERT(window[i]->packet->seqnum == 253+i);
+ }else{
+  CU_ASSERT(window[i]->packet->seqnum == i-2);
+ }
+ }
 
 
 }
