@@ -105,7 +105,7 @@ void test_encode_decode(void)
 	char buffer[buffersize];
 
 	pkt_encode(pkt, buffer, &buffersize);
-
+	CU_ASSERT(buffersize==8 + pkt_get_length(pkt) + padding);
 
 	char goodbuffer [buffersize]; // buffer sensé être obtenu après encode
 	goodbuffer[0]=0b00100011;
