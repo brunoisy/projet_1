@@ -1,6 +1,6 @@
 #include "sel_repeat_read.h"
 #include "packet_interface.h"
-#include "packet_interface.h"
+
 
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
@@ -25,7 +25,7 @@ void sel_repeat_read(const int sfd)
 		receive_buffer[j]=NULL;
 	}
 
-
+	pkt_status_code err;
 	ssize_t sdu_size;
 	while (1) { // Quid si EOF ?
 printf("before read\n");
@@ -34,9 +34,12 @@ printf("before read\n");
 
 
 		pkt_t * pkt = pkt_new();
-		if(pkt_decode(pkt_buffer, sdu_size, pkt)){
+		err=pkt_decode(pkt_buffer, sdu_size, pkt);
+		if(err){
+			if(err!=E_NOHEADER){
+				send_nack(pkt_get_seqnum(pkt), sfd, window_size);
+			}
 			pkt_del(pkt);
-			send_pkt(PTYPE_NACK, lastack, sfd, window_size);
 		}
 
 
@@ -48,7 +51,7 @@ printf("before read\n");
 		}
 		else{
 			pkt_del(pkt);
-			send_pkt(PTYPE_NACK, lastack, sfd, sfd, window_size);
+			send_nack(pkt_get_seqnum(pkt), sfd, window_size);
 		}
 
 
@@ -65,7 +68,7 @@ printf("after write payload\n");
 				receive_buffer[i]=NULL;
 				window_size++;
 				lastack=(lastack+1)%256;
-				send_pkt(PTYPE_ACK, lastack, sfd, window_size);
+				send_ack(lastack, sfd, window_size);
 			}
 			else{
 				break;
@@ -82,16 +85,25 @@ int write_payload(int fds, pkt_t * pkt){
 	write(fds, pkt_get_payload(pkt), pkt_get_length(pkt));
 }
 
-int send_pkt(ptypes_t ptype, int lastack, int sfd, int window_size){
+int send_ack(int lastack, int sfd, int window_size){
 	pkt_t * pkt = pkt_new();
-	pkt_set_type(pkt, ptype);
+	pkt_set_type(pkt, PTYPE_ACK);
 	pkt_set_window(pkt, window_size);
-	if(ptype==PTYPE_ACK){
-		pkt_set_seqnum(pkt, (lastack+1)%256);
-	}
-	/*if(ptype==PTYPE_NACK){
-		pkt_set_sequm(pkt, 
-	}*/
+	pkt_set_seqnum(pkt, (lastack+1)%256);
+	pkt_set_length(pkt, 0);
+	
+	size_t length = 8;
+	char data[length];
+	pkt_encode(pkt, data, &length);
+	pkt_del(pkt);
+	write(sfd, data, length);
+}
+
+int send_nack(int seqnum, int sfd, int window_size){
+	pkt_t * pkt = pkt_new();
+	pkt_set_type(pkt, PTYPE_NACK);
+	pkt_set_window(pkt, window_size);
+	pkt_set_seqnum(pkt, seqnum);
 	pkt_set_length(pkt, 0);
 	
 	size_t length = 8;
