@@ -86,7 +86,12 @@ int send_pkt(ptypes_t ptype, int lastack, int sfd, int window_size){
 	pkt_t * pkt = pkt_new();
 	pkt_set_type(pkt, ptype);
 	pkt_set_window(pkt, window_size);
-	pkt_set_seqnum(pkt, (lastack+1)%256);
+	if(ptype==PTYPE_ACK){
+		pkt_set_seqnum(pkt, (lastack+1)%256);
+	}
+	/*if(ptype==PTYPE_NACK){
+		pkt_set_sequm(pkt, 
+	}*/
 	pkt_set_length(pkt, 0);
 	
 	size_t length = 8;
