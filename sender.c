@@ -1,12 +1,12 @@
-#include "packet_interface.h"
-//#include <zlib.h>
+#include "real_address.h"
+#include "create_socket.h"
+#include "sel_repeat_write.h"
+
+#include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <arpa/inet.h>
-#include "sel_repeat_write.c"
-#include "chatUDP/wait_for_client.c"
-#include "chatUDP/real_address.c"
-#include "chatUDP/create_socket.c"
+
 
 
 int main(int argc , char * argv[]){
