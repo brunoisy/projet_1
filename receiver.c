@@ -1,7 +1,10 @@
-#include "real_address.h"
-#include "create_socket.h"
+#include "chatUDP/real_address.c"
+#include "chatUDP/create_socket.c"
+#include "sel_repeat_read.c"
+#include "chatUDP/wait_for_client.c"
 
-#include <zlib.h>
+
+//#include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <arpa/inet.h>
@@ -24,12 +27,12 @@ int main(int argc, char *argv[])
 	}
 
 	/* Get a socket */
-	int sfd= create_socket(NULL, -1, &addr, port);	/* Connected */
+	int sfd= create_socket(&addr, port, NULL, -1);	/* Connected */
 	if (sfd < 0) {
 		fprintf(stderr, "Failed to create the socket!\n");
 		return EXIT_FAILURE;
 	}
-	
+        
 
 
 printf("before_sel_read\n");

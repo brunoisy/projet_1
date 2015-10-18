@@ -40,13 +40,8 @@ int main(int argc , char * argv[]){
 		return EXIT_FAILURE;
   }
 
-  int socket = create_socket(&addr,port,NULL,-1);
-  if (socket > 0 && wait_for_client(socket) < 0) { 
-		fprintf(stderr,"Could not connect the socket after the first message.\n");
-		close(socket);
-		return EXIT_FAILURE;
-  }
-
+  int socket = create_socket(NULL,-1,&addr,port);
+  
   if (socket < 0) {
 		fprintf(stderr, "Failed to create the socket!\n");
 		return EXIT_FAILURE;
@@ -59,7 +54,7 @@ int main(int argc , char * argv[]){
     fprintf(stderr, "File '%s' does not exist\n", filename);
   }
   }
-
+  printf("Before write\n");
   sel_repeat_write(fd,socket);
   
 
