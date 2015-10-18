@@ -32,6 +32,24 @@ struct pkt_timer {
 
 };
 
+
+void printBits(size_t const size, void const *const ptr)
+{
+	unsigned char *b = (unsigned char *)ptr;
+	unsigned char byte;
+	int i, j;
+
+	for (i = size - 1; i >= 0; i--) {
+		for (j = 7; j >= 0; j--) {
+			byte = b[i] & (1 << j);
+			byte >>= j;
+			printf("%u", byte);
+		}
+	}
+	printf(" ");
+}
+
+
 void modify_buffer(int ack, int last, struct pkt_timer *buffer[])
 {
 
@@ -127,12 +145,12 @@ void sel_repeat_write(int fd, int socket)
 			fprintf(stderr, "Error select");
 			exit(errno);
 		}
-		printf("apres select");
+		printf("apres select\n");
 
 		if (FD_ISSET(fd, &rdfs)) {
 
 			real_payload_size = read(fd, buffer, max_payload_size);
-			size_t data_size = (size_t) real_payload_size + 8;
+			size_t data_size = max_sdu_size;
 			char data[data_size];
 			pkt_t *packet = pkt_new();
 			pkt_set_type(packet, PTYPE_DATA);
@@ -141,6 +159,7 @@ void sel_repeat_write(int fd, int socket)
 			pkt_set_length(packet, (uint16_t) real_payload_size);
 			pkt_set_payload(packet, buffer, real_payload_size);
 			pkt_encode(packet, data, &data_size);
+
 
 			seqnum = (seqnum + 1) % 256;
 
