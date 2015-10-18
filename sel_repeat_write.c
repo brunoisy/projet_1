@@ -51,14 +51,26 @@ void modify_buffer(int ack, int last, struct pkt_timer * buffer[]){
 
 }
 
+int get_ack_position(last_seqnum_send,seqnum_validated,pointeur_last_send){
+  
+  if(last_seqnum_send>=seqnum_validated){
+  
+   return pointeur_last_send - (last_seqnum_send - seqnum_validated);
 
+  }else{
+
+   return pointeur_last_send - last_seqnum_send - (256 - seqnum_validated); 
+
+  }
+
+}
 
 void sel_repeat_write(int fd, int socket){
 
  uint8_t max_window_size = 31;
  int max_payload_size = 512;
  int max_sdu_size = 520;
- char buffer[512];
+ char buffer[max_payload_size];
  int real_payload_size;
  int limited_window_size = max_window_size;
  uint8_t seqnum = 0;
@@ -154,19 +166,9 @@ printf("apres select");
 
   int seqnum_validated = pkt_get_seqnum(packet) - 1;
   
-  int ack_position;
+  
+  int ack_position = get_ack_position(last_seqnum_send,seqnum_validated,pointeur_last_send);
   limited_window_size = pkt_get_window(packet);
-
-  if(last_seqnum_send>=seqnum_validated){
-  
-   ack_position = pointeur_last_send - (last_seqnum_send - seqnum_validated);
-
-  }else{
-
-   ack_position = pointeur_last_send - last_seqnum_send - (256 - seqnum_validated); 
-
-  }
-  
   modify_buffer(ack_position,pointeur_last_send,window);
  
 
