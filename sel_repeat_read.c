@@ -17,7 +17,7 @@ void sel_repeat_read(const int sfd)
 {
 	int lastack=255;
 	int window_size = MAX_WINDOW_SIZE;
-	int max_sdu_size = MAX_PAYLOAD_SIZE + 8; //520
+	int max_sdu_size = MAX_PAYLOAD_SIZE + 8;
 	char pkt_buffer[max_sdu_size];
 	pkt_t * receive_buffer[MAX_WINDOW_SIZE];
 	int j;
@@ -27,7 +27,7 @@ void sel_repeat_read(const int sfd)
 
 	pkt_status_code err;
 	ssize_t sdu_size;
-	while (1) { // Quid si EOF ?
+	while (1) {
 printf("before read\n");
 		sdu_size = read(sfd, pkt_buffer, max_sdu_size); // buffer contient un nouveau packet
 
@@ -35,6 +35,8 @@ printf("before read\n");
 
 		pkt_t * pkt = pkt_new();
 		err=pkt_decode(pkt_buffer, sdu_size, pkt);
+printf("pkt_type : %d \n", pkt_get_type(pkt));
+printf("pkt_seqnum : %d\n", pkt_get_seqnum(pkt));
 		if(err){
 			if(err!=E_NOHEADER){
 				send_nack(pkt_get_seqnum(pkt), sfd, window_size);
@@ -74,16 +76,25 @@ printf("after write payload\n");
 				break;
 			}
 		}
-                printf("before refresh\n");
+printf("before refresh\n");
 		refresh(receive_buffer); //mettre a jour receive_buffer en enlevant les éléments lus, renvoi nbr élements vides
 		
 	}
 	
 }
 
+
+/*
+* écrit dans fds le contenu du payload de pkt
+*
+*/
 int write_payload(int fds, pkt_t * pkt){
 	write(fds, pkt_get_payload(pkt), pkt_get_length(pkt));
 }
+
+/*
+* envoi un packet ack au sender, contenant le numéro de seqnum du dernier packet reçu
+*/
 
 int send_ack(int lastack, int sfd, int window_size){
 	pkt_t * pkt = pkt_new();
@@ -99,6 +110,10 @@ int send_ack(int lastack, int sfd, int window_size){
 	write(sfd, data, length);
 }
 
+/*
+* envoi un packet nack au sender, contenant le numéro de seqnum du packet non reçu
+*
+*/
 int send_nack(int seqnum, int sfd, int window_size){
 	pkt_t * pkt = pkt_new();
 	pkt_set_type(pkt, PTYPE_NACK);
@@ -145,7 +160,6 @@ int insert_pkt(int lastack, pkt_t * buffer[MAX_WINDOW_SIZE], pkt_t * pkt){
 /*
 * enlève tous les NULLs se situant en début de buffer en décalant les éléments du buffer
 *
-*
 */
 int refresh(pkt_t * buffer[MAX_WINDOW_SIZE]){
 	int i;
@@ -178,21 +192,4 @@ int compare_seqnums(int lastack,  int seqnum1, int seqnum2){
 		seqnum2=seqnum2+256;
 	}
 	return seqnum1-seqnum2;
-}
-
-
-void printBits(size_t const size, void const *const ptr)
-{
-	unsigned char *b = (unsigned char *)ptr;
-	unsigned char byte;
-	int i, j;
-
-	for (i = size - 1; i >= 0; i--) {
-		for (j = 7; j >= 0; j--) {
-			byte = b[i] & (1 << j);
-			byte >>= j;
-			printf("%u", byte);
-		}
-	}
-	printf(" ");
 }
