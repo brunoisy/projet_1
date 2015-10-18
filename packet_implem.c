@@ -156,7 +156,6 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 
 	
 	uint32_t crc = htonl((const uint32_t)crc32(0, (const Bytef *)buf, pkt->length + 4 + padding));	//on calcule le crc sur le header et le payload
-        
 
 	buf[4 + pkt_get_length(pkt) + padding] = (char)crc;
 	buf[5 + pkt_get_length(pkt) + padding] = (char)(crc >> 8);

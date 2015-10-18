@@ -56,7 +56,7 @@ void sel_repeat_write(int fd, int socket)
 	uint8_t max_window_size = 31;
 	int max_payload_size = 512;
 	int max_sdu_size = 520;
-	char buffer[512];
+	char buffer[max_sdu_size];
 	int real_payload_size;
 	int limited_window_size = max_window_size;
 	uint8_t seqnum = 0;

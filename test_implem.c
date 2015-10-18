@@ -90,7 +90,7 @@ void test_encode_decode(void)
 	pkt_set_type(pkt, PTYPE_DATA);
 	pkt_set_window(pkt, 3);
 	pkt_set_seqnum(pkt, 4);
-	char *data = (char *)malloc(2);
+	char data[2];
 	data[0] = 'a';
 	data[1] = 'r';
 
@@ -102,12 +102,12 @@ void test_encode_decode(void)
 	}
 	size_t buffersize = 8 + pkt_get_length(pkt) + padding;	// taille fixe + taille payload
 
-	char *buffer = (char *)malloc((size_t) buffersize);
+	char buffer[buffersize];
 
 	pkt_encode(pkt, buffer, &buffersize);
 
 
-	char *goodbuffer = (char *)malloc((size_t) buffersize); // buffer sensé être obtenu après encode
+	char goodbuffer [buffersize]; // buffer sensé être obtenu après encode
 	goodbuffer[0]=0b00100011;
 	goodbuffer[1]=0b00000100;
 	goodbuffer[2]=0b00000000;
@@ -138,7 +138,7 @@ void test_encode_decode(void)
 	CU_ASSERT(compareData(pkt_get_payload(pkt),pkt_get_payload(pkt2), (int)pkt_get_length(pkt))==0);
 	CU_ASSERT(pkt_get_crc(pkt2)==goodcrc);
 
-	free(buffer);
+	
 	pkt_del(pkt);
 	pkt_del(pkt2);
 

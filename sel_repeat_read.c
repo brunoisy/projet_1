@@ -30,21 +30,29 @@ void sel_repeat_read(const int sfd)
 	while (1) { // Quid si EOF ?
 printf("before read\n");
 		sdu_size = read(sfd, pkt_buffer, max_sdu_size); // buffer contient un nouveau packet
-printf("after read\n");
-printf("sdu size:%d\n", sdu_size);
+printf("sdu size:%d\n", (int)sdu_size);
+
+int i;
+for (i = 1; i <=16; i++) {
+	printBits(1, &pkt_buffer[i - 1]);
+	if (i % 4 == 0 && i != 0) {
+		printf("\n");
+	}
+}
+
 		pkt_t * pkt = pkt_new();
 		if(pkt_decode(pkt_buffer, sdu_size, pkt)){
 			pkt_del(pkt);
 			send_pkt(PTYPE_NACK, lastack, sfd, window_size);
 		}
 
-		int i;
-		for (i = 1; i <=16; i++) {
-			printBits(1, &pkt_buffer[i - 1]);
-			if (i % 4 == 0 && i != 0) {
-				printf("\n");
-			}
-		}
+
+
+printf("ptype packet : %d\n", pkt_get_type(pkt));
+printf("window packet : %d\n", pkt_get_window(pkt));
+printf("seqnum packet : %d, seqnum attendu : %d\n", pkt_get_seqnum(pkt), (lastack+1)%256);
+printf("length packet : %d\n", pkt_get_length(pkt));
+
 
 
 
@@ -59,10 +67,7 @@ printf("packet is in window\n");
 		}
 		
 printf("packet is ok\n");
-printf("ptype packet : %d\n", pkt_get_type(pkt));
-printf("window packet : %d\n", pkt_get_window(pkt));
-printf("seqnum packet : %d, seqnum attendu : %d\n", pkt_get_seqnum(pkt), (lastack+1)%256);
-printf("length packet : %d\n", pkt_get_length(pkt));
+
 
 		//int i;
 		for(i=0; i<window_size; i++){// on écrit les packets de receive buffer qui sont succéssifs à lastack
