@@ -2,7 +2,39 @@
 #include <stdlib.h>
 #include <zlib.h>
 #include <CUnit/Basic.h>
-#include "sel_repeat_write.c"
+
+#include <netinet/in.h>		/* * sockaddr_in6 */
+#include <sys/types.h>		/* sockaddr_in6 */
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>		/* * sockaddr_in6 */
+#include <sys/types.h>		/* sockaddr_in6 */
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include<sys/time.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<pthread.h>
+#include<math.h>
+#include<sys/time.h>
+#include<semaphore.h>
+#include<unistd.h>
+#include<stdint.h>
+#include<fcntl.h>
+#include<errno.h>
+#include<string.h>
+
+
+#include "packet_interface.h"
+#include "sel_repeat_write.h"
 
 void test_modify_buffer(void);
 
@@ -22,8 +54,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Ajoute les tests à la suite */
-	if ((NULL == CU_add_test(pSuite, "test setters", test_getters_setters))
-	    || (NULL == CU_add_test(pSuite, "test encode", test_encode_decode))) {
+	if ((NULL == CU_add_test(pSuite, "test modify buffer", test_modify_buffer))) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}
@@ -41,18 +72,18 @@ int main(int argc, char *argv[])
 void test_modify_buffer(void)
 {
 
-	struct timepsec a;
+	struct timespec a;
 	struct timespec b;
 
 	uint8_t seqnum = 0;
 	struct pkt_timer *window[31];
+	int i;
+	for (i = 0; i < 20; i++) {
 
-	for (int i = 0; i < 20; i++) {
-
-		pkt_t packet = pkt_new();
-		pkt_set_seqnum(&packet, seqnum);
+		pkt_t * packet = pkt_new();
+		pkt_set_seqnum(packet, seqnum);
 		seqnum = (seqnum + 1) % 256;
-		pkt_timer bbb = { a, b, packet };
+		struct pkt_timer bbb = { a, b, packet };
 		window[i] = &bbb;
 
 	}
@@ -60,44 +91,44 @@ void test_modify_buffer(void)
 	//Imaginons un ack avec comme numero de sequence 12 et qui valide donc le seqnum 11.
 
 	int ack_position = get_ack_position(19, 11, 19);
-	modify_buffer(ack_postion, 19, window);
-
-	for (int i = 0; i < 8; i++) {
+	modify_buffer(ack_position, 19, window);
+	
+	for (i = 0; i < 8; i++) {
 		printf("Seqnum of %d th element : %d\n", i,
-		       window[i]->packet->seqnum);
-		CU_ASSERT(window[i]->packet->seqnum == 12 + i);
+		       pkt_get_seqnum(window[i]->packet));
+		CU_ASSERT((pkt_get_seqnum(window[i]->packet)) == 12 + i);
 	}
 
 	seqnum = 250;
 
-	for (int i = 0; i < 31; i++) {
+	for (i = 0; i < 31; i++) {
 
 		window[i] = NULL;
 
 	}
 
-	for (int i = 0; i < 20; i++) {
+	for (i = 0; i < 20; i++) {
 
-		pkt_t packet = pkt_new();
-		pkt_set_seqnum(&packet, seqnum);
+		pkt_t * packet = pkt_new();
+		pkt_set_seqnum(packet, seqnum);
 		seqnum = (seqnum + 1) % 256;
-		pkt_timer bbb = { a, b, packet };
+		struct pkt_timer bbb = { a, b, packet };
 		window[i] = &bbb;
 
 	}
 
 	//Imaginons un ack avec comme numero de sequence 253 et qui valide donc le seqnum 252.
 
-	int ack_position = get_ack_position(13, 252, 19);
-	modify_buffer(ack_postion, 19, window);
+	ack_position = get_ack_position(13, 252, 19);
+	modify_buffer(ack_position, 19, window);
 
-	for (int i = 0; i < 17; i++) {
+	for (i = 0; i < 17; i++) {
 		printf("Seqnum of %d th element : %d\n", i,
-		       window[i]->packet->seqnum);
+		       pkt_get_seqnum(window[i]->packet));
 		if (i < 2) {
-			CU_ASSERT(window[i]->packet->seqnum == 253 + i);
+			CU_ASSERT(pkt_get_seqnum(window[i]->packet) == 253 + i);
 		} else {
-			CU_ASSERT(window[i]->packet->seqnum == i - 2);
+			CU_ASSERT(pkt_get_seqnum(window[i]->packet) == i - 2);
 		}
 	}
 

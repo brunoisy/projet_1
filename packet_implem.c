@@ -33,6 +33,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 
 	if (len < 4) {
 		return E_NOHEADER;
+ printf("NO HEADER\n");
 	}
 
 
@@ -49,33 +50,42 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 
 
 	if (len < 8) {		// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
+printf("unconsistent because len <8\n");
 		return E_UNCONSISTENT;
 	}
 
 	if (len % 4 != 0) {	// si la taille du packet ne respecte pas l'allignement sur 4 bytes
+printf("unconsistent because len / 4 !=0\n");
 		return E_UNCONSISTENT;
 	}
 
 	//vérification erreurs du header
 	if (err != PKT_OK) {
+ printf("err\n");
 		return err;
 	}
-	if (err2 != PKT_OK) {	// potentiellement problématique (inginious)
+	if (err2 != PKT_OK) {
+	// potentiellement problématique (inginious)
+ printf("err2\n");
 		return err2;
 	}
 	if (err3 != PKT_OK) {
+ printf("err3\n");
 		return err3;
 	}
 	if (err4 != PKT_OK) {
+                 printf("err4\n");
 		return err4;
 	}
 	//placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
 	if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK
 	    && pkt->type != PTYPE_NACK) {
+                printf("E_TYPE\n");
 		return E_TYPE;
 	}
  
 	if (pkt_get_type(pkt) != PTYPE_DATA && pkt_get_length(pkt) > 0 ) { //si le type n'est pas data, la longueur du payload est nulle
+printf("unconsistent because pkt_get_type(pkt) != PTYPE_DATA && pkt_get_length(pkt) > 0 \n");
 		return E_UNCONSISTENT;
 	}
 
@@ -86,7 +96,8 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 		padding = 4 - pkt_get_length(pkt) % 4;
 	}
 
-	if (pkt_get_length(pkt) + 8 + padding != (uint16_t) len) {// si la longeur du package != len    
+	if (pkt_get_length(pkt) + 8 + padding != (uint16_t) len) {// si la longeur du package != len  
+printf("unconsistent because pkt_get_length(pkt) + 8 + padding != (uint16_t) len \n");
 		return E_UNCONSISTENT;
 	}
 
@@ -118,12 +129,16 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 
 
 	if (pkt_get_crc(pkt) != thiscrc) {
+ printf("E_CRC\n");
 		return E_CRC;
+
 	}
 	if (err5 != PKT_OK) {
+ printf("err5\n");
 		return err5;
 	}
 	if (err6 != PKT_OK) {
+ printf("err6\n");
 		return err6;
 	}
 
