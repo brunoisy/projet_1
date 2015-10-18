@@ -131,6 +131,10 @@ int refresh(pkt_t * buffer[MAX_WINDOW_SIZE]){
 			for(j=0; j+i<MAX_WINDOW_SIZE; j++){
 				buffer[j]=buffer[j+i];
 			}
+			int k;
+			for(k=j; k<MAX_WINOW_SIZE; k++){
+				buffer[k]=NULL;
+			}
 			break;
 		}
 	}
