@@ -1,30 +1,6 @@
-
-Skip to content
-This repository
-
-    Pull requests
-    Issues
-    Gist
-
-    @brunoisy
-
-3
-0
-
-    0
-
-brunoisy/projet_1
-
-projet_1/sel_repeat_write.c
-c569f4 a minute ago
-@hamham001 hamham001 xrite
-2 contributors
-@hamham001
-@brunoisy
-208 lines (147 sloc) 4.9 KB
 //#include "sel_repeat_write.h"
 #include "packet_interface.h"
-#include "packet_implem.c"
+#include "packet_imlem.c"
 
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
@@ -229,9 +205,12 @@ printf("apres select");
  }
 }
 }
+<<<<<<< HEAD
 
     Status API Training Shop Blog About Pricing 
 
     © 2015 GitHub, Inc. Terms Privacy Security Contact Help 
 
 
+=======
+>>>>>>> c569f4c601dd27801dd045c464d914cdd129cfef
