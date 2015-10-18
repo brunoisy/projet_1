@@ -1,6 +1,7 @@
 #include "sel_repeat_read.h"
 #include "packet_interface.h"
-#include "packet_implem.c"
+#include "packet_interface.h"
+
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
 #include <stdlib.h>
@@ -34,7 +35,7 @@ void sel_repeat_read(const int sfd)
 			pkt_del(pkt);
 			send_pkt(PTYPE_NACK, lastack, sfd, window_size);
 		}
-		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), lastack+1) < window_size){
+		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), lastack+1) < window_size){ //si le numéro de seq est dans la fenêtre
 			insert_pkt(lastack, receive_buffer, pkt);
 			window_size--;
 		}
@@ -54,6 +55,7 @@ void sel_repeat_read(const int sfd)
 				write_payload(1, receive_buffer[i]); // 1 ou -f ?
                                 printf("after write payload\n");
 				pkt_del(receive_buffer[i]);
+				receive_buffer[i]=NULL;
 				window_size++;
 				lastack=(lastack+1)%256;
 				send_pkt(PTYPE_ACK, lastack, sfd, window_size);
@@ -99,12 +101,15 @@ int insert_pkt(int lastack, pkt_t * buffer[MAX_WINDOW_SIZE], pkt_t * pkt){
 			break;
 		}
 		else if(compare_seqnums(lastack, pkt_get_seqnum(pkt), pkt_get_seqnum(buffer[i])) < 0){
-			pkt_t * next = buffer[i];
+			pkt_t * this = buffer[i];
+			pkt_t * next;
 			buffer[i]=pkt;
 			int j;
 			for(j=1; j<MAX_WINDOW_SIZE-i; j++){
-				buffer[i+j]=next;
-				next=buffer[i+j+1];
+				next=buffer[i+j];
+				buffer[i+j]=this;
+				this=next;
+				
 			}
 			break;
 		}
@@ -125,6 +130,10 @@ int refresh(pkt_t * buffer[MAX_WINDOW_SIZE]){
 			int j;
 			for(j=0; j+i<MAX_WINDOW_SIZE; j++){
 				buffer[j]=buffer[j+i];
+			}
+			int k;
+			for(k=j; k<MAX_WINOW_SIZE; k++){
+				buffer[k]=NULL;
 			}
 			break;
 		}

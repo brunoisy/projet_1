@@ -1,3 +1,6 @@
+#include "sel_repeat_write.h"
+#include "packet_interface.h"
+
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
 #include <stdlib.h>
@@ -5,7 +8,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include "packet_implem.c"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include<sys/time.h>
