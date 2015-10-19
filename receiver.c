@@ -35,8 +35,6 @@ int main(int argc, char *argv[])
 	}
         
 
-
-printf("before_sel_read\n");
 	sel_repeat_read(sfd);
 
 	close(sfd);

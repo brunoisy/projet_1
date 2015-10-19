@@ -1,7 +1,6 @@
 #include "sel_repeat_write.h"
 #include "packet_interface.h"
 
-
 #include <netinet/in.h>		/* * sockaddr_in6 */
 #include <sys/types.h>		/* sockaddr_in6 */
 #include <stdlib.h>
@@ -23,6 +22,7 @@
 #include<fcntl.h>
 #include<errno.h>
 #include<string.h>
+
 
 struct pkt_timer {
 
@@ -142,6 +142,7 @@ void sel_repeat_write(int fd, int socket)
 				size_t data_size = max_sdu_size;
 				char data[data_size];
 				pkt_encode(window[i]->packet, data, &data_size);
+                                printf("Timer for seqnum %d expired! Sent again.\n",pkt_get_seqnum(window[i]->packet));
 				write(socket, data, data_size);
 
 			}
@@ -176,7 +177,7 @@ void sel_repeat_write(int fd, int socket)
 			pkt_t *packet = pkt_new();
 			pkt_set_type(packet, PTYPE_DATA);
 			pkt_set_seqnum(packet, seqnum);
-			printf("seqnum : %d \n", pkt_get_seqnum(packet));
+			//printf("seqnum : %d \n", pkt_get_seqnum(packet));
 			pkt_set_window(packet, 0);
 			pkt_set_length(packet, (uint16_t)
 				       real_payload_size);
@@ -196,7 +197,7 @@ void sel_repeat_write(int fd, int socket)
 
 			window[current_index_window] = element;
 			current_index_window++;
-			printf("lecture et ecriture de 1 packet\n");
+			printf("Envoi packet seqnum:%d\n",pkt_get_seqnum(packet));
 			write(socket, data, data_size);
 
 		}
@@ -205,33 +206,36 @@ void sel_repeat_write(int fd, int socket)
 
 			char buffer[8];
 			int length = read(socket, buffer, 8);
+                        //printBits(8,buffer);
+                        printf("\n");
 			pkt_t *packet = pkt_new();
 			int status = pkt_decode(buffer, length, packet);
+                        //printf("Statut: %d\n",status);
 			if (status == PKT_OK) {
 
 				ptypes_t type = pkt_get_type(packet);
 				int last_seqnum_send = seqnum - 1;
 				int pointeur_last_send =
 				    current_index_window - 1;
-
+                                
 				if (type == PTYPE_ACK) {
-
+                                        
 					int seqnum_validated = pkt_get_seqnum(packet) - 1;
-					  printf("ack seqnum: %d\n",seqnum_validated+1);
+					  //printf("ack seqnum: %d\n",seqnum_validated+1);
 					  
 					  int ack_position = get_ack_position(last_seqnum_send,seqnum_validated,pointeur_last_send);
 					  
 					  //printf("ack position in the buffer: %d\n",ack_position);
 					  //printf("pointeur_last_send:%d\n", pointeur_last_send);
 					  //printf("last_seqnum_send:%d\n", last_seqnum_send);
-					  printf("seqnum_validated:%d\n", seqnum_validated);
+					  printf("ACK --- Seqnum_validated:%d\n", seqnum_validated);
 					  limited_window_size = pkt_get_window(packet);
-					  printf("limited window size: %d\n", limited_window_size);
-					  printf("Buffer before modify_buffer:\n");
-					  print_buffer(window,current_index_window);
+					  //printf("Limited window size: %d\n", limited_window_size);
+					  //printf("Buffer before modify_buffer:\n");
+					  //print_buffer(window,current_index_window);
 					  
 					  modify_buffer(ack_position,pointeur_last_send,window);
-					  printf("Buffer after modify_buffer:\n");
+					  //printf("Buffer after modify_buffer:\n");
 					  current_index_window = current_index_window - ack_position -1;
 					  print_buffer(window,current_index_window);
                                         if(current_index_window == 0 && finish==1){
@@ -241,37 +245,16 @@ void sel_repeat_write(int fd, int socket)
 				} else {
 
 					if (type == PTYPE_NACK) {
-printf("NACK received\n");
+                                                printf("NACK --- Seqnum:%d\n", pkt_get_seqnum(packet));
 						limited_window_size
 						    = pkt_get_window(packet);
+                                                printf("Limited window size: %d\n", limited_window_size);
+                                                
 						int seqnum_to_send_again
 						    = pkt_get_seqnum(packet);
-						int nack_position;
-						if (last_seqnum_send >=
-						    seqnum_to_send_again) {
-
-							nack_position
-							    =
-							    pointeur_last_send
-							    -
-							    (last_seqnum_send
-							     -
-							     seqnum_to_send_again);
-
-						} else {
-
-							nack_position
-							    =
-							    pointeur_last_send
-							    -
-							    last_seqnum_send
-							    -
-							    (256
-							     -
-							     seqnum_to_send_again);
-
-						}
-
+						int nack_position = get_ack_position(last_seqnum_send, pkt_get_seqnum(packet), pointeur_last_send);
+						 
+                                                
 						size_t data_size = max_sdu_size;
 						char data[data_size];
 						pkt_encode
@@ -282,7 +265,7 @@ printf("NACK received\n");
 						    (CLOCK_MONOTONIC,
 						     &(window
 						       [nack_position]->start));
-						write(socket, data, data_size);
+						write(socket, data, data_size); 
 
 					}
 

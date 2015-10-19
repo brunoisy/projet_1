@@ -33,14 +33,14 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 
 	if (len < 4) {
 		return E_NOHEADER;
- printf("NO HEADER\n");
 	}
 
 
 	//initialisation du header
-	pkt_status_code err = pkt_set_type(pkt, data[0] >> 5);
+        
+	pkt_status_code err = pkt_set_type(pkt, (uint8_t)(0b00000111 & (data[0] >> 5)));
 	pkt_status_code err2 =
-	    pkt_set_window(pkt, (const uint8_t)(data[0] << 3) >> 3);
+	    pkt_set_window(pkt, (const uint8_t)(0b00011111 &((data[0] << 3) >> 3)));
 	pkt_status_code err3 = pkt_set_seqnum(pkt, data[1]);
 
 	uint16_t length = data[3];
@@ -50,42 +50,35 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t * pkt)
 
 
 	if (len < 8) {		// si la taille du packet et < à la taille fixe nécessaire (type + window + ...)
-printf("unconsistent because len <8\n");
 		return E_UNCONSISTENT;
 	}
 
 	if (len % 4 != 0) {	// si la taille du packet ne respecte pas l'allignement sur 4 bytes
-printf("unconsistent because len / 4 !=0\n");
 		return E_UNCONSISTENT;
 	}
 
 	//vérification erreurs du header
 	if (err != PKT_OK) {
- printf("err\n");
+                printf("la\n");
 		return err;
 	}
-	if (err2 != PKT_OK) {
-	// potentiellement problématique (inginious)
- printf("err2\n");
+	if (err2 != PKT_OK) {	// potentiellement problématique (inginious)
 		return err2;
 	}
 	if (err3 != PKT_OK) {
- printf("err3\n");
 		return err3;
 	}
 	if (err4 != PKT_OK) {
-                 printf("err4\n");
 		return err4;
 	}
 	//placé ici car "Unless the error is E_NOHEADER, the packet has at least the values of the header found in the data stream."
 	if (pkt->type != PTYPE_DATA && pkt->type != PTYPE_ACK
 	    && pkt->type != PTYPE_NACK) {
-                printf("E_TYPE\n");
+                	printf("ici\n");
 		return E_TYPE;
 	}
  
 	if (pkt_get_type(pkt) != PTYPE_DATA && pkt_get_length(pkt) > 0 ) { //si le type n'est pas data, la longueur du payload est nulle
-printf("unconsistent because pkt_get_type(pkt) != PTYPE_DATA && pkt_get_length(pkt) > 0 \n");
 		return E_UNCONSISTENT;
 	}
 
@@ -96,8 +89,7 @@ printf("unconsistent because pkt_get_type(pkt) != PTYPE_DATA && pkt_get_length(p
 		padding = 4 - pkt_get_length(pkt) % 4;
 	}
 
-	if (pkt_get_length(pkt) + 8 + padding != (uint16_t) len) {// si la longeur du package != len  
-printf("unconsistent because pkt_get_length(pkt) + 8 + padding != (uint16_t) len \n");
+	if (pkt_get_length(pkt) + 8 + padding != (uint16_t) len) {// si la longeur du package != len    
 		return E_UNCONSISTENT;
 	}
 
@@ -123,22 +115,18 @@ printf("unconsistent because pkt_get_length(pkt) + 8 + padding != (uint16_t) len
 		crc = crc | inter;
 	}
 
-	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(crc));	// endianness!!
+	pkt_status_code err6 = pkt_set_crc(pkt, ntohl(crc));	// endianness!! !!!!j'ai mis 0!!!!!!!!!!!!!!!
 
 	uint32_t thiscrc = (uint32_t) crc32(0, (const Bytef *)data, pkt->length + 4 + padding);	//crc calculé sans le padding
 
 
 	if (pkt_get_crc(pkt) != thiscrc) {
- printf("E_CRC\n");
 		return E_CRC;
-
 	}
 	if (err5 != PKT_OK) {
- printf("err5\n");
 		return err5;
 	}
 	if (err6 != PKT_OK) {
- printf("err6\n");
 		return err6;
 	}
 
@@ -151,6 +139,7 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 	buf[0] = ((char)pkt->type) << 5 | (char)pkt->window;
 	buf[1] = pkt->seqnum;
 	uint16_t length = pkt_get_length(pkt);
+        //printf("pkt_length: %u\n", pkt_get_length(pkt));
 	uint16_t ordering = htons(length);
 	buf[2] = ordering & 0xFF;
 	buf[3] = ordering >> 8;
@@ -181,7 +170,10 @@ pkt_status_code pkt_encode(const pkt_t * pkt, char *buf, size_t * len)
 		return E_NOMEM;
 	}
 
-	*len = 8 + (pkt->length) + padding;
+	*len = 8 + (pkt_get_length(pkt)) + padding;
+        /*printf("padding %d\n", padding);
+        printf("payload length without padding: %u\n",pkt_get_length(pkt));
+        printf("return value of decode: %d\n", *len);*/
 
 	return PKT_OK;
 }
@@ -220,6 +212,7 @@ const char *pkt_get_payload(const pkt_t * pkt)
 pkt_status_code pkt_set_type(pkt_t * pkt, const ptypes_t type)
 {
 	if ((type != PTYPE_DATA) && (type != PTYPE_ACK) && (type != PTYPE_NACK)) {
+                printf("INVALID TYPE. TYPE = %d\n",type);
 		return E_TYPE;
 	}
 
